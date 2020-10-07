@@ -29,7 +29,22 @@ import (
 	"log"
 
 	"github.com/Daniel-WWU-IT/libreva/pkg/reva"
+	"github.com/Daniel-WWU-IT/libreva/pkg/reva/action"
 )
+
+func runActions(session *reva.Session) {
+	if act, err := action.NewEnumFilesAction(session); err == nil {
+		if files, err := act.ListAll("/home", true); err == nil {
+			for _, info := range files {
+				fmt.Printf("%s %d %d %v %s\n", info.Type, info.Mtime, info.Size, info.Id, info.Path)
+			}
+		} else {
+			log.Fatalf("Can't list files: %v", err)
+		}
+	} else {
+		log.Fatalf("Can't log in to Reva: %v", err)
+	}
+}
 
 func main() {
 	if session, err := reva.NewSession(); err == nil {
@@ -47,7 +62,8 @@ func main() {
 		}
 
 		if err := session.BasicLogin("daniel", "danielpass"); err == nil {
-			log.Printf("Successfully logged into Reva (token=%v)", session.GetToken())
+			log.Printf("Successfully logged into Reva (token=%v)", session.Token())
+			runActions(session)
 		} else {
 			log.Fatalf("Can't log in to Reva: %v", err)
 		}

@@ -33,15 +33,21 @@ import (
 	gateway "github.com/cs3org/go-cs3apis/cs3/gateway/v1beta1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/metadata"
 )
 
 // Session stores information about a Reva session.
 type Session struct {
-	ctx context.Context
-
+	ctx    context.Context
 	client gateway.GatewayAPIClient
-	token  string
+
+	token string
 }
+
+const (
+	accessTokenIndex = 0
+	accessTokenName  = "x-access-token"
+)
 
 func (session *Session) initSession(ctx context.Context) error {
 	if ctx == nil {
@@ -82,7 +88,7 @@ func (session *Session) getConnection(host string, insecure bool) (*grpc.ClientC
 func (session *Session) GetLoginMethods() ([]string, error) {
 	req := &registry.ListAuthProvidersRequest{}
 	if res, err := session.client.ListAuthProviders(session.ctx, req); err == nil {
-		if err := checkRPCStatus(res.Status); err != nil {
+		if err := CheckRPCStatus(res.Status); err != nil {
 			return []string{}, err
 		}
 
@@ -105,11 +111,18 @@ func (session *Session) Login(method string, username string, password string) e
 	}
 
 	if res, err := session.client.Authenticate(session.ctx, req); err == nil {
-		if err := checkRPCStatus(res.Status); err != nil {
+		if err := CheckRPCStatus(res.Status); err != nil {
 			return err
 		}
 
+		if res.Token == "" {
+			return fmt.Errorf("invalid token received: %q", res.Token)
+		}
 		session.token = res.Token
+
+		// Now that we have a valid token, we can append this to our context
+		session.addTokenToContext()
+
 		return nil
 	} else {
 		return err
@@ -130,9 +143,27 @@ func (session *Session) BasicLogin(username string, password string) error {
 	}
 }
 
-// GetToken returns the current session token.
-func (session *Session) GetToken() string {
+func (session *Session) addTokenToContext() {
+	session.ctx = context.WithValue(session.ctx, accessTokenIndex, session.token)
+	session.ctx = metadata.AppendToOutgoingContext(session.ctx, accessTokenName, session.token)
+}
+
+func (session *Session) Client() gateway.GatewayAPIClient {
+	return session.client
+}
+
+func (session *Session) Context() context.Context {
+	return session.ctx
+}
+
+// Token returns the current session token.
+func (session *Session) Token() string {
 	return session.token
+}
+
+// IsValid checks whether the session has been initialized and fully established.
+func (session *Session) IsValid() bool {
+	return session.client != nil && session.ctx != nil && session.token != ""
 }
 
 // NewSessionWithContext creates a new Reva session using the provided context.

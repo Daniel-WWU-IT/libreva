@@ -22,18 +22,23 @@
  * SOFTWARE.
  */
 
-package reva
+package action
 
 import (
 	"fmt"
 
-	rpc "github.com/cs3org/go-cs3apis/cs3/rpc/v1beta1"
+	"github.com/Daniel-WWU-IT/libreva/pkg/reva"
 )
 
-func CheckRPCStatus(status *rpc.Status) error {
-	if status.Code != rpc.Code_CODE_OK {
-		return fmt.Errorf("%q (code=%+v, trace=%q)", status.Message, status.Code, status.Trace)
-	} else {
-		return nil
+type action struct {
+	session *reva.Session
+}
+
+func (act *action) initAction(session *reva.Session) error {
+	if session == nil || !session.IsValid() {
+		return fmt.Errorf("no valid session provided")
 	}
+	act.session = session
+
+	return nil
 }
