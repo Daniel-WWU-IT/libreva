@@ -5,5 +5,6 @@ go 1.13
 require (
 	github.com/cs3org/go-cs3apis v0.0.0-20201007120910-416ed6cf8b00
 	github.com/cs3org/reva v1.2.1
+	github.com/studio-b12/gowebdav v0.0.0-20200303150724-9380631c29a1
 	google.golang.org/grpc v1.32.0
 )

@@ -34,15 +34,24 @@ import (
 
 func runActions(session *reva.Session) {
 	if act, err := action.NewEnumFilesAction(session); err == nil {
-		if files, err := act.ListAll("/home", true); err == nil {
+		if files, err := act.ListFiles("/home", true); err == nil {
 			for _, info := range files {
-				fmt.Printf("%s %d %d %v %s\n", info.Type, info.Mtime, info.Size, info.Id, info.Path)
+				fmt.Printf("%s [%db] -- %s\n", info.Path, info.Size, info.Type)
+
+				// Download the file
+				if actDl, err := action.NewDownloadAction(session); err == nil {
+					if data, err := actDl.DownloadFile(info); err == nil {
+						log.Printf("Downloaded %d bytes for '%v'", len(data), info.Path)
+					} else {
+						log.Printf("Unable to download data for '%v': %v", info.Path, err)
+					}
+				}
+
+				fmt.Println()
 			}
 		} else {
 			log.Fatalf("Can't list files: %v", err)
 		}
-	} else {
-		log.Fatalf("Can't log in to Reva: %v", err)
 	}
 }
 

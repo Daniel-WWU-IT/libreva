@@ -44,11 +44,6 @@ type Session struct {
 	token string
 }
 
-const (
-	accessTokenIndex = 0
-	accessTokenName  = "x-access-token"
-)
-
 func (session *Session) initSession(ctx context.Context) error {
 	if ctx == nil {
 		return fmt.Errorf("no context provided")
@@ -144,8 +139,8 @@ func (session *Session) BasicLogin(username string, password string) error {
 }
 
 func (session *Session) addTokenToContext() {
-	session.ctx = context.WithValue(session.ctx, accessTokenIndex, session.token)
-	session.ctx = metadata.AppendToOutgoingContext(session.ctx, accessTokenName, session.token)
+	session.ctx = context.WithValue(session.ctx, AccessTokenIndex, session.token)
+	session.ctx = metadata.AppendToOutgoingContext(session.ctx, AccessTokenName, session.token)
 }
 
 func (session *Session) Client() gateway.GatewayAPIClient {

@@ -27,8 +27,9 @@ package action
 import (
 	"fmt"
 
-	"github.com/Daniel-WWU-IT/libreva/pkg/reva"
 	storage "github.com/cs3org/go-cs3apis/cs3/storage/provider/v1beta1"
+
+	"github.com/Daniel-WWU-IT/libreva/pkg/reva"
 )
 
 // EnumFilesAction offers functions to enumerate files and directories of a container.
@@ -48,7 +49,7 @@ func (action *EnumFilesAction) ListAll(path string, includeSubdirectories bool) 
 			return []*storage.ResourceInfo{}, err
 		}
 
-		fileList := make([]*storage.ResourceInfo, 0, len(res.Infos))
+		fileList := make([]*storage.ResourceInfo, 0, len(res.Infos)*64)
 		for _, fi := range res.Infos {
 			// Ignore resources that are neither files nor directories
 			if fi.Type <= storage.ResourceType_RESOURCE_TYPE_INVALID || fi.Type >= storage.ResourceType_RESOURCE_TYPE_INTERNAL {
@@ -75,6 +76,38 @@ func (action *EnumFilesAction) ListAll(path string, includeSubdirectories bool) 
 	} else {
 		return []*storage.ResourceInfo{}, fmt.Errorf("unable to list files in '%v': %v", path, err)
 	}
+}
+
+// ListAllWithFilter retrieves all files and directories that fulfill the provided predicate.
+func (action *EnumFilesAction) ListAllWithFilter(path string, includeSubdirectories bool, filter func(*storage.ResourceInfo) bool) ([]*storage.ResourceInfo, error) {
+	if all, err := action.ListAll(path, includeSubdirectories); err == nil {
+		fileList := make([]*storage.ResourceInfo, 0, len(all))
+
+		for _, fi := range all {
+			// Add only those entries that fulfill the predicate
+			if filter(fi) {
+				fileList = append(fileList, fi)
+			}
+		}
+
+		return fileList, nil
+	} else {
+		return []*storage.ResourceInfo{}, err
+	}
+}
+
+// ListFiles retrieves all files contained in the provided path.
+func (action *EnumFilesAction) ListFiles(path string, includeSubdirectories bool) ([]*storage.ResourceInfo, error) {
+	return action.ListAllWithFilter(path, includeSubdirectories, func(fi *storage.ResourceInfo) bool {
+		return fi.Type == storage.ResourceType_RESOURCE_TYPE_FILE || fi.Type == storage.ResourceType_RESOURCE_TYPE_SYMLINK
+	})
+}
+
+// ListDirectories retrieves all directories contained in the provided path.
+func (action *EnumFilesAction) ListDirectories(path string, includeSubdirectories bool) ([]*storage.ResourceInfo, error) {
+	return action.ListAllWithFilter(path, includeSubdirectories, func(fi *storage.ResourceInfo) bool {
+		return fi.Type == storage.ResourceType_RESOURCE_TYPE_CONTAINER
+	})
 }
 
 // NewEnumFilesAction creates a new enum files action.
