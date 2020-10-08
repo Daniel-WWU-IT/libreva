@@ -36,7 +36,6 @@ import (
 	provider "github.com/cs3org/go-cs3apis/cs3/storage/provider/v1beta1"
 	storage "github.com/cs3org/go-cs3apis/cs3/storage/provider/v1beta1"
 	types "github.com/cs3org/go-cs3apis/cs3/types/v1beta1"
-	"github.com/cs3org/reva/pkg/rhttp"
 	"github.com/studio-b12/gowebdav"
 
 	"github.com/Daniel-WWU-IT/libreva/pkg/reva"
@@ -50,7 +49,7 @@ type DownloadAction struct {
 // DownloadFile retrieves the provided file data; in case of an error, nil is returned.
 func (action *DownloadAction) DownloadFile(fileInfo *storage.ResourceInfo) ([]byte, error) {
 	if fileInfo.Type != storage.ResourceType_RESOURCE_TYPE_FILE {
-		return []byte{}, fmt.Errorf("resource is not a file")
+		return nil, fmt.Errorf("resource is not a file")
 	}
 
 	// Issue a file download request to Reva; this will provide the endpoint to read the file data from
@@ -58,15 +57,19 @@ func (action *DownloadAction) DownloadFile(fileInfo *storage.ResourceInfo) ([]by
 		// Try to get a WebDAV reader first
 		reader, supported, err := action.getWebDAVReader(download.DownloadEndpoint, download.Opaque)
 		if err != nil {
-			if supported { // WebDAV is supported but failed
+			if supported { // WebDAV is supported but failed, so treat this as a real error
 				return nil, fmt.Errorf("downloading via WebDAV failed: %v", err)
 			}
 
+			// WebDAV is not supported, so revert to an HTTP reader
 			reader, err = action.getHTTPReader(download.DownloadEndpoint, download.Token)
 			if err != nil {
 				return nil, fmt.Errorf("no data reader could be created to read from '%v': %v", download.DownloadEndpoint, err)
 			}
 		}
+
+		// reader should never be nil here
+		defer reader.Close()
 
 		if data, err := ioutil.ReadAll(reader); err == nil {
 			return data, nil
@@ -79,6 +82,7 @@ func (action *DownloadAction) DownloadFile(fileInfo *storage.ResourceInfo) ([]by
 }
 
 func (action *DownloadAction) initiateDownload(fileInfo *storage.ResourceInfo) (*gateway.InitiateFileDownloadResponse, error) {
+	// Initiating a download request gets us the download endpoint for the specified resource
 	req := &provider.InitiateFileDownloadRequest{
 		Ref: &provider.Reference{
 			Spec: &provider.Reference_Path{
@@ -98,12 +102,13 @@ func (action *DownloadAction) initiateDownload(fileInfo *storage.ResourceInfo) (
 	}
 }
 
-func (action *DownloadAction) getWebDAVReader(endpoint string, opaque *types.Opaque) (io.Reader, bool, error) {
+func (action *DownloadAction) getWebDAVReader(endpoint string, opaque *types.Opaque) (io.ReadCloser, bool, error) {
 	if opaque == nil {
 		return nil, false, fmt.Errorf("missing Opaque object")
 	}
 
 	checkOpaqueDecoder := func(o *types.OpaqueEntry) error {
+		// Only plain values are supported
 		if strings.EqualFold(o.Decoder, "plain") {
 			return nil
 		} else {
@@ -111,12 +116,12 @@ func (action *DownloadAction) getWebDAVReader(endpoint string, opaque *types.Opa
 		}
 	}
 
-	if tokenOpaque, ok := opaque.Map["webdav-token"]; ok {
+	if tokenOpaque, ok := opaque.Map[reva.WebDAVTokenName]; ok {
 		if err := checkOpaqueDecoder(tokenOpaque); err != nil {
 			return nil, false, err
 		}
 
-		if fileOpaque, ok := opaque.Map["webdav-file-path"]; ok {
+		if fileOpaque, ok := opaque.Map[reva.WebDAVPathName]; ok {
 			if err := checkOpaqueDecoder(fileOpaque); err != nil {
 				return nil, false, err
 			}
@@ -137,19 +142,16 @@ func (action *DownloadAction) getWebDAVReader(endpoint string, opaque *types.Opa
 	}
 }
 
-func (action *DownloadAction) getHTTPReader(endpoint string, transportToken string) (io.Reader, error) {
-	if httpReq, err := rhttp.NewRequest(action.session.Context(), "GET", endpoint, nil); err == nil {
+func (action *DownloadAction) getHTTPReader(endpoint string, transportToken string) (io.ReadCloser, error) {
+	if httpReq, err := http.NewRequest("GET", endpoint, nil); err == nil {
+		httpReq.Header.Set(reva.AccessTokenName, action.session.Token())
 		httpReq.Header.Set(reva.TransportTokenName, transportToken)
 
-		httpClient := rhttp.GetHTTPClient(
-			rhttp.Context(action.session.Context()),
-			rhttp.Insecure(true),
-			rhttp.Timeout(time.Duration(24*int64(time.Hour))),
-		)
+		httpClient := http.Client{
+			Timeout: time.Duration(24 * int64(time.Hour)),
+		}
 
 		if httpRes, err := httpClient.Do(httpReq); err == nil {
-			defer httpRes.Body.Close()
-
 			if httpRes.StatusCode != http.StatusOK {
 				return nil, fmt.Errorf("retrieving data from '%v' failed: %v", endpoint, httpRes.Status)
 			}

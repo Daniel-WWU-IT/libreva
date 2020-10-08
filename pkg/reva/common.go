@@ -34,6 +34,9 @@ const (
 	AccessTokenIndex   = 0
 	AccessTokenName    = "x-access-token"
 	TransportTokenName = "X-Reva-Transfer"
+
+	WebDAVTokenName = "webdav-token"
+	WebDAVPathName  = "webdav-file-path"
 )
 
 func CheckRPCStatus(status *rpc.Status) error {
