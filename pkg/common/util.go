@@ -22,11 +22,11 @@
  * SOFTWARE.
  */
 
-package reva
+package common
 
 import "strings"
 
-func findString(a []string, x string) int {
+func FindString(a []string, x string) int {
 	for i, n := range a {
 		if x == n {
 			return i
@@ -35,7 +35,7 @@ func findString(a []string, x string) int {
 	return -1
 }
 
-func findStringNoCase(a []string, x string) int {
+func FindStringNoCase(a []string, x string) int {
 	for i, n := range a {
 		if strings.EqualFold(x, n) {
 			return i

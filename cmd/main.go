@@ -28,8 +28,8 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/Daniel-WWU-IT/libreva/pkg/action"
 	"github.com/Daniel-WWU-IT/libreva/pkg/reva"
-	"github.com/Daniel-WWU-IT/libreva/pkg/reva/action"
 )
 
 func runActions(session *reva.Session) {

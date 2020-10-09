@@ -29,6 +29,7 @@ import (
 
 	storage "github.com/cs3org/go-cs3apis/cs3/storage/provider/v1beta1"
 
+	"github.com/Daniel-WWU-IT/libreva/pkg/common/net"
 	"github.com/Daniel-WWU-IT/libreva/pkg/reva"
 )
 
@@ -45,7 +46,7 @@ func (action *EnumFilesAction) ListAll(path string, includeSubdirectories bool) 
 	req := &storage.ListContainerRequest{Ref: ref}
 
 	if res, err := action.session.Client().ListContainer(action.session.Context(), req); err == nil {
-		if err := reva.CheckRPCStatus(res.Status); err != nil {
+		if err := net.CheckRPCStatus(res.Status); err != nil {
 			return []*storage.ResourceInfo{}, err
 		}
 

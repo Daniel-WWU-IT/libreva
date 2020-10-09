@@ -34,6 +34,9 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
+
+	"github.com/Daniel-WWU-IT/libreva/pkg/common"
+	"github.com/Daniel-WWU-IT/libreva/pkg/common/net"
 )
 
 // Session stores information about a Reva session.
@@ -83,7 +86,7 @@ func (session *Session) getConnection(host string, insecure bool) (*grpc.ClientC
 func (session *Session) GetLoginMethods() ([]string, error) {
 	req := &registry.ListAuthProvidersRequest{}
 	if res, err := session.client.ListAuthProviders(session.ctx, req); err == nil {
-		if err := CheckRPCStatus(res.Status); err != nil {
+		if err := net.CheckRPCStatus(res.Status); err != nil {
 			return []string{}, err
 		}
 
@@ -106,7 +109,7 @@ func (session *Session) Login(method string, username string, password string) e
 	}
 
 	if res, err := session.client.Authenticate(session.ctx, req); err == nil {
-		if err := CheckRPCStatus(res.Status); err != nil {
+		if err := net.CheckRPCStatus(res.Status); err != nil {
 			return err
 		}
 
@@ -128,7 +131,7 @@ func (session *Session) Login(method string, username string, password string) e
 func (session *Session) BasicLogin(username string, password string) error {
 	// Check if the 'basic' method is actually supported by the Reva instance; only continue if this is the case
 	if supportedMethods, err := session.GetLoginMethods(); err == nil {
-		if findStringNoCase(supportedMethods, "basic") == -1 {
+		if common.FindStringNoCase(supportedMethods, "basic") == -1 {
 			return fmt.Errorf("'basic' login method is not supported")
 		}
 
@@ -139,8 +142,8 @@ func (session *Session) BasicLogin(username string, password string) error {
 }
 
 func (session *Session) addTokenToContext() {
-	session.ctx = context.WithValue(session.ctx, AccessTokenIndex, session.token)
-	session.ctx = metadata.AppendToOutgoingContext(session.ctx, AccessTokenName, session.token)
+	session.ctx = context.WithValue(session.ctx, common.AccessTokenIndex, session.token)
+	session.ctx = metadata.AppendToOutgoingContext(session.ctx, common.AccessTokenName, session.token)
 }
 
 func (session *Session) Client() gateway.GatewayAPIClient {
