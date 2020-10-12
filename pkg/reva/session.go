@@ -28,6 +28,9 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"time"
 
 	registry "github.com/cs3org/go-cs3apis/cs3/auth/registry/v1beta1"
 	gateway "github.com/cs3org/go-cs3apis/cs3/gateway/v1beta1"
@@ -119,7 +122,8 @@ func (session *Session) Login(method string, username string, password string) e
 		session.token = res.Token
 
 		// Now that we have a valid token, we can append this to our context
-		session.addTokenToContext()
+		session.ctx = context.WithValue(session.ctx, common.AccessTokenIndex, session.token)
+		session.ctx = metadata.AppendToOutgoingContext(session.ctx, common.AccessTokenName, session.token)
 
 		return nil
 	} else {
@@ -141,9 +145,35 @@ func (session *Session) BasicLogin(username string, password string) error {
 	}
 }
 
-func (session *Session) addTokenToContext() {
-	session.ctx = context.WithValue(session.ctx, common.AccessTokenIndex, session.token)
-	session.ctx = metadata.AppendToOutgoingContext(session.ctx, common.AccessTokenName, session.token)
+func (session *Session) ReadTransportEndpoint(endpoint string, transportToken string) ([]byte, error) {
+	if httpReq, err := http.NewRequestWithContext(session.ctx, "GET", endpoint, nil); err == nil {
+		httpReq.Header.Set(common.TransportTokenName, transportToken)
+
+		httpClient := http.Client{
+			Timeout: time.Duration(24 * int64(time.Hour)),
+		}
+
+		if httpRes, err := httpClient.Do(httpReq); err == nil {
+			if httpRes.StatusCode != http.StatusOK {
+				return nil, fmt.Errorf("retrieving data from '%v' failed: %v", endpoint, httpRes.Status)
+			}
+			defer httpRes.Body.Close()
+
+			if data, err := ioutil.ReadAll(httpRes.Body); err == nil {
+				return data, nil
+			} else {
+				return nil, fmt.Errorf("reading data from '%v' failed: %v", endpoint, err)
+			}
+		} else {
+			return nil, fmt.Errorf("unable to perform the HTTP request for '%v': %v", endpoint, err)
+		}
+	} else {
+		return nil, fmt.Errorf("unable to generate the HTTP request for '%v': %v", endpoint, err)
+	}
+}
+
+func (session *Session) ReadEndpoint(endpoint string) ([]byte, error) {
+	return session.ReadTransportEndpoint(endpoint, "")
 }
 
 func (session *Session) Client() gateway.GatewayAPIClient {

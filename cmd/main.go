@@ -66,12 +66,14 @@ func main() {
 			for _, m := range methods {
 				fmt.Printf("* %v\n", m)
 			}
+			fmt.Println()
 		} else {
 			log.Fatalf("Can't list login methods: %v", err)
 		}
 
 		if err := session.BasicLogin("daniel", "danielpass"); err == nil {
 			log.Printf("Successfully logged into Reva (token=%v)", session.Token())
+			fmt.Println()
 			runActions(session)
 		} else {
 			log.Fatalf("Can't log in to Reva: %v", err)
