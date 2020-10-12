@@ -28,12 +28,11 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"time"
+	"io"
 
 	registry "github.com/cs3org/go-cs3apis/cs3/auth/registry/v1beta1"
 	gateway "github.com/cs3org/go-cs3apis/cs3/gateway/v1beta1"
+	provider "github.com/cs3org/go-cs3apis/cs3/storage/provider/v1beta1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
@@ -145,35 +144,12 @@ func (session *Session) BasicLogin(username string, password string) error {
 	}
 }
 
-func (session *Session) ReadTransportEndpoint(endpoint string, transportToken string) ([]byte, error) {
-	if httpReq, err := http.NewRequestWithContext(session.ctx, "GET", endpoint, nil); err == nil {
-		httpReq.Header.Set(common.TransportTokenName, transportToken)
-
-		httpClient := http.Client{
-			Timeout: time.Duration(24 * int64(time.Hour)),
-		}
-
-		if httpRes, err := httpClient.Do(httpReq); err == nil {
-			if httpRes.StatusCode != http.StatusOK {
-				return nil, fmt.Errorf("retrieving data from '%v' failed: %v", endpoint, httpRes.Status)
-			}
-			defer httpRes.Body.Close()
-
-			if data, err := ioutil.ReadAll(httpRes.Body); err == nil {
-				return data, nil
-			} else {
-				return nil, fmt.Errorf("reading data from '%v' failed: %v", endpoint, err)
-			}
-		} else {
-			return nil, fmt.Errorf("unable to perform the HTTP request for '%v': %v", endpoint, err)
-		}
-	} else {
-		return nil, fmt.Errorf("unable to generate the HTTP request for '%v': %v", endpoint, err)
-	}
+func (session *Session) ReadEndpoint(endpoint string, transportToken string) ([]byte, error) {
+	return net.ReadHTTPEndpoint(session.ctx, endpoint, transportToken)
 }
 
-func (session *Session) ReadEndpoint(endpoint string) ([]byte, error) {
-	return session.ReadTransportEndpoint(endpoint, "")
+func (session *Session) WriteEndpoint(endpoint string, data io.Reader, size int64, checksumType provider.ResourceChecksumType, transportToken string, enableTUS bool) error {
+	return net.WriteHTTPEndpoint(session.ctx, endpoint, data, size, checksumType, transportToken, enableTUS)
 }
 
 func (session *Session) Client() gateway.GatewayAPIClient {

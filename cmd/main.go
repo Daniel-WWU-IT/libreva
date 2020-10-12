@@ -27,12 +27,22 @@ package main
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/Daniel-WWU-IT/libreva/pkg/action"
 	"github.com/Daniel-WWU-IT/libreva/pkg/reva"
 )
 
 func runActions(session *reva.Session) {
+	if act, err := action.NewUploadAction(session); err == nil {
+		if info, err := act.UploadFile("/home/test.txt", strings.NewReader("Hello World!\n"), 13, false); err == nil {
+			log.Printf("Uploaded file: %q [%db]", info.Path, info.Size)
+			fmt.Println()
+		} else {
+			log.Fatalf("Can't upload file: %v", err)
+		}
+	}
+
 	if act, err := action.NewEnumFilesAction(session); err == nil {
 		if files, err := act.ListFiles("/home", true); err == nil {
 			for _, info := range files {

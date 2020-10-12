@@ -46,6 +46,8 @@ func (action *DownloadAction) DownloadFile(fileInfo *storage.ResourceInfo) ([]by
 		return nil, fmt.Errorf("resource is not a file")
 	}
 
+	// TODO: Check if file exists (stat)
+
 	// Issue a file download request to Reva; this will provide the endpoint to read the file data from
 	if download, err := action.initiateDownload(fileInfo); err == nil {
 		// Try to get the file via WebDAV first
@@ -57,7 +59,7 @@ func (action *DownloadAction) DownloadFile(fileInfo *storage.ResourceInfo) ([]by
 			}
 		} else {
 			// WebDAV is not supported, so directly read the HTTP endpoint
-			if data, err := action.session.ReadTransportEndpoint(download.DownloadEndpoint, download.Token); err == nil {
+			if data, err := action.session.ReadEndpoint(download.DownloadEndpoint, download.Token); err == nil {
 				return data, nil
 			} else {
 				return nil, fmt.Errorf("error while reading from '%v' via HTTP: %v", download.DownloadEndpoint, err)
