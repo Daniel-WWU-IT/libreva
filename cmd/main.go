@@ -30,18 +30,20 @@ import (
 	"strings"
 
 	"github.com/Daniel-WWU-IT/libreva/pkg/action"
+	"github.com/Daniel-WWU-IT/libreva/pkg/common"
 	"github.com/Daniel-WWU-IT/libreva/pkg/reva"
 )
 
 func runActions(session *reva.Session) {
 	if act, err := action.NewUploadAction(session); err == nil {
-		if info, err := act.UploadFile("/home/test.txt", strings.NewReader("Hello World!\n"), 13, false); err == nil {
-			log.Printf("Uploaded file: %q [%db]", info.Path, info.Size)
-			fmt.Println()
+		if _, err := act.UploadFile("/home/test.txt", strings.NewReader("Hello World!\n"), common.CreateDataDescriptor("test.txt", 13), true); err == nil {
+			//log.Printf("Uploaded file: %q [%db]", info.Path, info.Size)
+			log.Println("Upped the stuff")
 		} else {
-			log.Fatalf("Can't upload file: %v", err)
+			log.Printf("Can't upload file: %v", err)
 		}
 	}
+	fmt.Println()
 
 	if act, err := action.NewEnumFilesAction(session); err == nil {
 		if files, err := act.ListFiles("/home", true); err == nil {
@@ -60,9 +62,10 @@ func runActions(session *reva.Session) {
 				fmt.Println()
 			}
 		} else {
-			log.Fatalf("Can't list files: %v", err)
+			log.Printf("Can't list files: %v", err)
 		}
 	}
+	fmt.Println()
 }
 
 func main() {

@@ -32,7 +32,6 @@ import (
 
 	registry "github.com/cs3org/go-cs3apis/cs3/auth/registry/v1beta1"
 	gateway "github.com/cs3org/go-cs3apis/cs3/gateway/v1beta1"
-	provider "github.com/cs3org/go-cs3apis/cs3/storage/provider/v1beta1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
@@ -144,18 +143,22 @@ func (session *Session) BasicLogin(username string, password string) error {
 	}
 }
 
-func (session *Session) ReadEndpoint(endpoint string, transportToken string) ([]byte, error) {
-	return net.ReadHTTPEndpoint(session.ctx, endpoint, transportToken)
+// NewReadRequest returns an HTTP read request helper instance.
+func (session *Session) NewReadRequest(endpoint string, transportToken string) (*HTTPRequest, error) {
+	return newHTTPRequest(session, endpoint, "GET", transportToken, nil)
 }
 
-func (session *Session) WriteEndpoint(endpoint string, data io.Reader, size int64, checksumType provider.ResourceChecksumType, transportToken string, enableTUS bool) error {
-	return net.WriteHTTPEndpoint(session.ctx, endpoint, data, size, checksumType, transportToken, enableTUS)
+// NewWriteRequest returns an HTTP write request helper instance.
+func (session *Session) NewWriteRequest(endpoint string, transportToken string, data io.Reader) (*HTTPRequest, error) {
+	return newHTTPRequest(session, endpoint, "PUT", transportToken, data)
 }
 
+// Client gets the gateway client instance.
 func (session *Session) Client() gateway.GatewayAPIClient {
 	return session.client
 }
 
+// Token gets the session token.
 func (session *Session) Context() context.Context {
 	return session.ctx
 }

@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"os"
 	"strconv"
 
 	gateway "github.com/cs3org/go-cs3apis/cs3/gateway/v1beta1"
@@ -39,7 +40,7 @@ type UploadAction struct {
 }
 
 // UploadFile uploads the provided file data to the target file; in case of an error, nil is returned.
-func (action *UploadAction) UploadFile(target string, data io.Reader, size int64, enableTUS bool) (*storage.ResourceInfo, error) {
+func (action *UploadAction) UploadFile(target string, data io.Reader, fileInfo os.FileInfo, enableTUS bool) (*storage.ResourceInfo, error) {
 	if target == "" {
 		return nil, fmt.Errorf("no target specified")
 	}
@@ -47,10 +48,10 @@ func (action *UploadAction) UploadFile(target string, data io.Reader, size int64
 	// TODO: Check if target exists (stat), make target dir (mkdir), etc.
 
 	// Issue a file upload request to Reva; this will provide the endpoint to write the file data to
-	if upload, err := action.initiateUpload(target, size); err == nil {
+	if upload, err := action.initiateUpload(target, fileInfo.Size()); err == nil {
 		// Try to upload the file via WebDAV first
 		if client, err := net.NewWebDAVClient(upload.UploadEndpoint, upload.Opaque); err == nil {
-			if err := client.Write(data, size); err == nil {
+			if err := client.Write(data, fileInfo.Size()); err == nil {
 				// TODO: Stat new file
 				return nil, nil
 			} else {
@@ -58,11 +59,15 @@ func (action *UploadAction) UploadFile(target string, data io.Reader, size int64
 			}
 		} else {
 			// WebDAV is not supported, so directly write to the HTTP endpoint
-			if err := action.session.WriteEndpoint(upload.UploadEndpoint, data, size, action.selectChecksumType(upload.AvailableChecksums), upload.Token, enableTUS); err == nil {
-				// TODO: Stat new file
-				return nil, nil
+			if request, err := action.session.NewWriteRequest(upload.UploadEndpoint, upload.Token, data); err == nil {
+				if err := request.Write(target, fileInfo, action.selectChecksumType(upload.AvailableChecksums), enableTUS); err == nil {
+					// TODO: Stat new file
+					return nil, nil
+				} else {
+					return nil, fmt.Errorf("error while writing to '%v' via HTTP: %v", upload.UploadEndpoint, err)
+				}
 			} else {
-				return nil, fmt.Errorf("error while writing to '%v' via HTTP: %v", upload.UploadEndpoint, err)
+				return nil, fmt.Errorf("unable to create an HTTP request for '%v': %v", upload.UploadEndpoint, err)
 			}
 		}
 	} else {
