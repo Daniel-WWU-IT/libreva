@@ -107,7 +107,7 @@ func (action *UploadAction) upload(data io.Reader, dataInfo os.FileInfo, target 
 	}
 
 	// Query information about the just-uploaded file
-	if fileInfoAct, err := NewFileInfoAction(action.session); err == nil {
+	if fileInfoAct, err := NewFileOperationsAction(action.session); err == nil {
 		if info, err := fileInfoAct.Stat(target); err == nil {
 			return info, nil
 		} else {

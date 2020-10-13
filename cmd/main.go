@@ -33,12 +33,42 @@ import (
 )
 
 func runActions(session *reva.Session) {
+	// Try creating a directory
+	if act, err := action.NewFileOperationsAction(session); err == nil {
+		if err := act.MakePath("/home/subdir/subsub"); err == nil {
+			log.Println("Created path /home/subdir/subsub")
+		} else {
+			log.Println("Could not create path /home/subdir/subsub")
+		}
+	}
+	fmt.Println()
+
+	// Try deleting a directory
+	if act, err := action.NewFileOperationsAction(session); err == nil {
+		if err := act.Remove("/home/subdir/subsub"); err == nil {
+			log.Println("Removed path /home/subdir/subsub")
+		} else {
+			log.Println("Could not remove path /home/subdir/subsub")
+		}
+	}
+	fmt.Println()
+
 	// Try uploading
 	if act, err := action.NewUploadAction(session); err == nil {
-		if info, err := act.UploadBytes([]byte("HELLO WORLD!\n"), "/home/test.txt"); err == nil {
+		if info, err := act.UploadBytes([]byte("HELLO WORLD!\n"), "/home/subdir/test.txt"); err == nil {
 			log.Printf("Uploaded file: %s [%db] -- %s", info.Path, info.Size, info.Type)
 		} else {
 			log.Printf("Can't upload file: %v", err)
+		}
+	}
+	fmt.Println()
+
+	// Try moving
+	if act, err := action.NewFileOperationsAction(session); err == nil {
+		if err := act.MoveTo("/home/subdir/test.txt", "/home/sub2"); err == nil {
+			log.Println("Moved test.txt around")
+		} else {
+			log.Println("Could not move test.txt around")
 		}
 	}
 	fmt.Println()
@@ -67,7 +97,7 @@ func runActions(session *reva.Session) {
 	fmt.Println()
 
 	// Try accessing some files and directories
-	if act, err := action.NewFileInfoAction(session); err == nil {
+	if act, err := action.NewFileOperationsAction(session); err == nil {
 		if act.FileExists("/home/blargh.txt") {
 			log.Println("File '/home/blargh.txt' found")
 		} else {
