@@ -40,13 +40,25 @@ type DownloadAction struct {
 	action
 }
 
-// DownloadFile retrieves the provided file data; in case of an error, nil is returned.
+// DownloadFileByPath retrieves data of the provided file path; in case of an error, nil is returned.
+func (action *DownloadAction) DownloadFileByPath(path string) ([]byte, error) {
+	// Get the ResourceInfo object of the specified path
+	if fileInfoAct, err := NewFileInfoAction(action.session); err == nil {
+		if info, err := fileInfoAct.Stat(path); err == nil {
+			return action.DownloadFile(info)
+		} else {
+			return nil, fmt.Errorf("the path '%v' was not found: %v", path, err)
+		}
+	} else {
+		return nil, fmt.Errorf("unable to create file info action: %v", err)
+	}
+}
+
+// DownloadFile retrieves data of the provided file; in case of an error, nil is returned.
 func (action *DownloadAction) DownloadFile(fileInfo *storage.ResourceInfo) ([]byte, error) {
 	if fileInfo.Type != storage.ResourceType_RESOURCE_TYPE_FILE {
 		return nil, fmt.Errorf("resource is not a file")
 	}
-
-	// TODO: Check if file exists (stat)
 
 	// Issue a file download request to Reva; this will provide the endpoint to read the file data from
 	if download, err := action.initiateDownload(fileInfo); err == nil {

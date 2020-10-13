@@ -27,17 +27,15 @@ package main
 import (
 	"fmt"
 	"log"
-	"strings"
 
 	"github.com/Daniel-WWU-IT/libreva/pkg/action"
-	"github.com/Daniel-WWU-IT/libreva/pkg/common"
 	"github.com/Daniel-WWU-IT/libreva/pkg/reva"
 )
 
 func runActions(session *reva.Session) {
 	// Try uploading
 	if act, err := action.NewUploadAction(session); err == nil {
-		if info, err := act.UploadFile("/home/test.txt", strings.NewReader("Hello World!\n"), common.CreateDataDescriptor("test.txt", 13), false); err == nil {
+		if info, err := act.UploadBytes([]byte("HELLO WORLD!\n"), "/home/test.txt"); err == nil {
 			log.Printf("Uploaded file: %s [%db] -- %s", info.Path, info.Size, info.Type)
 		} else {
 			log.Printf("Can't upload file: %v", err)

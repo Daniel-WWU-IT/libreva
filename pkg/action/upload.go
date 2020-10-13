@@ -19,10 +19,12 @@
 package action
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"math"
 	"os"
+	"path/filepath"
 	"strconv"
 
 	gateway "github.com/cs3org/go-cs3apis/cs3/gateway/v1beta1"
@@ -30,6 +32,7 @@ import (
 	storage "github.com/cs3org/go-cs3apis/cs3/storage/provider/v1beta1"
 	types "github.com/cs3org/go-cs3apis/cs3/types/v1beta1"
 
+	"github.com/Daniel-WWU-IT/libreva/pkg/common"
 	"github.com/Daniel-WWU-IT/libreva/pkg/common/crypto"
 	"github.com/Daniel-WWU-IT/libreva/pkg/common/net"
 	"github.com/Daniel-WWU-IT/libreva/pkg/reva"
@@ -38,21 +41,41 @@ import (
 // UploadAction is used to upload files through Reva.
 type UploadAction struct {
 	action
+
+	EnableTUS bool
 }
 
-// UploadFile uploads the provided file data to the target file; in case of an error, nil is returned.
-func (action *UploadAction) UploadFile(target string, data io.Reader, fileInfo os.FileInfo, enableTUS bool) (*storage.ResourceInfo, error) {
+// UploadFile uploads the provided file to the target; in case of an error, nil is returned.
+func (action *UploadAction) UploadFile(file *os.File, target string) (*storage.ResourceInfo, error) {
+	if fileInfo, err := file.Stat(); err == nil {
+		return action.upload(file, fileInfo, target)
+	} else {
+		return nil, fmt.Errorf("unable to stat the specified file: %v", err)
+	}
+}
+
+// UploadBytes uploads the provided byte data to the target; in case of an error, nil is returned.
+func (action *UploadAction) UploadBytes(data []byte, target string) (*storage.ResourceInfo, error) {
+	return action.UploadData(bytes.NewReader(data), int64(len(data)), target)
+}
+
+// UploadData uploads data from the provided data reader to the target; in case of an error, nil is returned.
+func (action *UploadAction) UploadData(data io.Reader, size int64, target string) (*storage.ResourceInfo, error) {
+	return action.upload(data, common.CreateDataDescriptor(filepath.Base(target), size), target)
+}
+
+func (action *UploadAction) upload(data io.Reader, dataInfo os.FileInfo, target string) (*storage.ResourceInfo, error) {
 	if target == "" {
 		return nil, fmt.Errorf("no target specified")
 	}
 
-	// TODO: Check if target exists (stat), make target dir (mkdir), etc.
+	// TODO: Make target dirs
 
 	// Issue a file upload request to Reva; this will provide the endpoint to write the file data to
-	if upload, err := action.initiateUpload(target, fileInfo.Size()); err == nil {
+	if upload, err := action.initiateUpload(target, dataInfo.Size()); err == nil {
 		// Try to upload the file via WebDAV first
 		if client, err := net.NewWebDAVClient(upload.UploadEndpoint, upload.Opaque); err == nil {
-			if err := client.Write(data, fileInfo.Size()); err != nil {
+			if err := client.Write(data, dataInfo.Size()); err != nil {
 				return nil, fmt.Errorf("error while writing to '%v' via WebDAV: %v", upload.UploadEndpoint, err)
 			}
 		} else {
@@ -69,8 +92,8 @@ func (action *UploadAction) UploadFile(target string, data io.Reader, fileInfo o
 				seeker.Seek(0, 0)
 			}
 
-			if enableTUS {
-				if err := action.uploadFileTUS(upload, target, data, fileInfo, checksum, checksumTypeName); err != nil {
+			if action.EnableTUS {
+				if err := action.uploadFileTUS(upload, target, data, dataInfo, checksum, checksumTypeName); err != nil {
 					return nil, fmt.Errorf("error while writing to '%v' via TUS: %v", upload.UploadEndpoint, err)
 				}
 			} else {

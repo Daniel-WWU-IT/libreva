@@ -70,9 +70,8 @@ func (client *TUSClient) Write(data io.Reader, target string, fileInfo os.FileIn
 		"dir":      filepath.Dir(target),
 		"checksum": fmt.Sprintf("%s %s", checksumType, checksum),
 	}
-	fingerprint := fmt.Sprintf("%s-%d-%s-%s", fileInfo.Name(), fileInfo.Size(), fileInfo.ModTime(), checksum)
+	fingerprint := fmt.Sprintf("%s-%d-%s-%s", filepath.Base(target), fileInfo.Size(), fileInfo.ModTime(), checksum)
 
-	// Create the upload(er)
 	upload := tus.NewUpload(data, fileInfo.Size(), metadata, fingerprint)
 	client.config.Store.Set(upload.Fingerprint, client.client.Url)
 	uploader := tus.NewUploader(client.client, client.client.Url, upload, 0)
