@@ -188,3 +188,12 @@ func NewUploadAction(session *reva.Session) (*UploadAction, error) {
 	}
 	return action, nil
 }
+
+// MustNewUploadAction creates a new upload action and panics on failure.
+func MustNewUploadAction(session *reva.Session) *UploadAction {
+	if action, err := NewUploadAction(session); err == nil {
+		return action
+	} else {
+		panic(err)
+	}
+}

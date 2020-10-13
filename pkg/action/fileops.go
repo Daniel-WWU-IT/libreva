@@ -182,3 +182,12 @@ func NewFileOperationsAction(session *reva.Session) (*FileOperationsAction, erro
 	}
 	return action, nil
 }
+
+// MustNewFileOperationsAction creates a new file operations action and panics on failure.
+func MustNewFileOperationsAction(session *reva.Session) *FileOperationsAction {
+	if action, err := NewFileOperationsAction(session); err == nil {
+		return action
+	} else {
+		panic(err)
+	}
+}

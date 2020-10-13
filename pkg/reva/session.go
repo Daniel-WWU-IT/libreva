@@ -187,3 +187,12 @@ func NewSessionWithContext(ctx context.Context) (*Session, error) {
 func NewSession() (*Session, error) {
 	return NewSessionWithContext(context.Background())
 }
+
+// MustNewSession creates a new session and panics on failure.
+func MustNewSession() *Session {
+	if session, err := NewSession(); err == nil {
+		return session
+	} else {
+		panic(err)
+	}
+}

@@ -115,3 +115,12 @@ func NewDownloadAction(session *reva.Session) (*DownloadAction, error) {
 	}
 	return action, nil
 }
+
+// MustNewDownloadAction creates a new download action and panics on failure.
+func MustNewDownloadAction(session *reva.Session) *DownloadAction {
+	if action, err := NewDownloadAction(session); err == nil {
+		return action
+	} else {
+		panic(err)
+	}
+}

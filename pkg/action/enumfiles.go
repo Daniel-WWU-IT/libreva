@@ -119,3 +119,12 @@ func NewEnumFilesAction(session *reva.Session) (*EnumFilesAction, error) {
 	}
 	return action, nil
 }
+
+// MustNewEnumFilesAction creates a new enum files action and panics on failure.
+func MustNewEnumFilesAction(session *reva.Session) *EnumFilesAction {
+	if action, err := NewEnumFilesAction(session); err == nil {
+		return action
+	} else {
+		panic(err)
+	}
+}

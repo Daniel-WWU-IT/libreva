@@ -34,58 +34,62 @@ import (
 
 func runActions(session *reva.Session) {
 	// Try creating a directory
-	if act, err := action.NewFileOperationsAction(session); err == nil {
+	{
+		act := action.MustNewFileOperationsAction(session)
 		if err := act.MakePath("/home/subdir/subsub"); err == nil {
 			log.Println("Created path /home/subdir/subsub")
 		} else {
 			log.Println("Could not create path /home/subdir/subsub")
 		}
+		fmt.Println()
 	}
-	fmt.Println()
 
 	// Try deleting a directory
-	if act, err := action.NewFileOperationsAction(session); err == nil {
+	{
+		act := action.MustNewFileOperationsAction(session)
 		if err := act.Remove("/home/subdir/subsub"); err == nil {
 			log.Println("Removed path /home/subdir/subsub")
 		} else {
 			log.Println("Could not remove path /home/subdir/subsub")
 		}
+		fmt.Println()
 	}
-	fmt.Println()
 
 	// Try uploading
-	if act, err := action.NewUploadAction(session); err == nil {
+	{
+		act := action.MustNewUploadAction(session)
 		if info, err := act.UploadBytes([]byte("HELLO WORLD!\n"), "/home/subdir/test.txt"); err == nil {
 			log.Printf("Uploaded file: %s [%db] -- %s", info.Path, info.Size, info.Type)
 		} else {
 			log.Printf("Can't upload file: %v", err)
 		}
+		fmt.Println()
 	}
-	fmt.Println()
 
 	// Try moving
-	if act, err := action.NewFileOperationsAction(session); err == nil {
+	{
+		act := action.MustNewFileOperationsAction(session)
 		if err := act.MoveTo("/home/subdir/test.txt", "/home/sub2"); err == nil {
 			log.Println("Moved test.txt around")
 		} else {
 			log.Println("Could not move test.txt around")
 		}
+		fmt.Println()
 	}
-	fmt.Println()
 
 	// Try listing and downloading
-	if act, err := action.NewEnumFilesAction(session); err == nil {
+	{
+		act := action.MustNewEnumFilesAction(session)
 		if files, err := act.ListFiles("/home", true); err == nil {
 			for _, info := range files {
 				log.Printf("%s [%db] -- %s", info.Path, info.Size, info.Type)
 
 				// Download the file
-				if actDl, err := action.NewDownloadAction(session); err == nil {
-					if data, err := actDl.Download(info); err == nil {
-						log.Printf("Downloaded %d bytes for '%v'", len(data), info.Path)
-					} else {
-						log.Printf("Unable to download data for '%v': %v", info.Path, err)
-					}
+				actDl := action.MustNewDownloadAction(session)
+				if data, err := actDl.Download(info); err == nil {
+					log.Printf("Downloaded %d bytes for '%v'", len(data), info.Path)
+				} else {
+					log.Printf("Unable to download data for '%v': %v", info.Path, err)
 				}
 
 				log.Println("---")
@@ -93,11 +97,12 @@ func runActions(session *reva.Session) {
 		} else {
 			log.Printf("Can't list files: %v", err)
 		}
+		fmt.Println()
 	}
-	fmt.Println()
 
 	// Try accessing some files and directories
-	if act, err := action.NewFileOperationsAction(session); err == nil {
+	{
+		act := action.MustNewFileOperationsAction(session)
 		if act.FileExists("/home/blargh.txt") {
 			log.Println("File '/home/blargh.txt' found")
 		} else {
@@ -109,34 +114,31 @@ func runActions(session *reva.Session) {
 		} else {
 			log.Println("Directory '/home' NOT found")
 		}
+		fmt.Println()
 	}
-	fmt.Println()
 }
 
 func main() {
-	if session, err := reva.NewSession(); err == nil {
-		if err := session.Initiate("sciencemesh-test.uni-muenster.de:9600", false); err != nil {
-			log.Fatalf("Can't initiate Reva session: %v", err)
-		}
+	session := reva.MustNewSession()
+	if err := session.Initiate("sciencemesh-test.uni-muenster.de:9600", false); err != nil {
+		log.Fatalf("Can't initiate Reva session: %v", err)
+	}
 
-		if methods, err := session.GetLoginMethods(); err == nil {
-			fmt.Println("Supported login methods:")
-			for _, m := range methods {
-				fmt.Printf("* %v\n", m)
-			}
-			fmt.Println()
-		} else {
-			log.Fatalf("Can't list login methods: %v", err)
+	if methods, err := session.GetLoginMethods(); err == nil {
+		fmt.Println("Supported login methods:")
+		for _, m := range methods {
+			fmt.Printf("* %v\n", m)
 		}
-
-		if err := session.BasicLogin("daniel", "danielpass"); err == nil {
-			log.Printf("Successfully logged into Reva (token=%v)", session.Token())
-			fmt.Println()
-			runActions(session)
-		} else {
-			log.Fatalf("Can't log in to Reva: %v", err)
-		}
+		fmt.Println()
 	} else {
-		log.Fatalf("Can't create Reva session: %v", err)
+		log.Fatalf("Can't list login methods: %v", err)
+	}
+
+	if err := session.BasicLogin("daniel", "danielpass"); err == nil {
+		log.Printf("Successfully logged into Reva (token=%v)", session.Token())
+		fmt.Println()
+		runActions(session)
+	} else {
+		log.Fatalf("Can't log in to Reva: %v", err)
 	}
 }
