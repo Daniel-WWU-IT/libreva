@@ -34,13 +34,13 @@ import (
 	"github.com/Daniel-WWU-IT/libreva/pkg/reva"
 )
 
-// FileInfoAction queries information about a remote file through Reva.
-type FileInfoAction struct {
+// FileOperationsAction offers basic file operations.
+type FileOperationsAction struct {
 	action
 }
 
 // Stat queries the file information for the specified remote file.
-func (action *FileInfoAction) Stat(path string) (*storage.ResourceInfo, error) {
+func (action *FileOperationsAction) Stat(path string) (*storage.ResourceInfo, error) {
 	ref := &provider.Reference{
 		Spec: &provider.Reference_Path{Path: path},
 	}
@@ -57,7 +57,8 @@ func (action *FileInfoAction) Stat(path string) (*storage.ResourceInfo, error) {
 	}
 }
 
-func (action *FileInfoAction) FileExists(path string) bool {
+// FileExists checks whether the specified exists.
+func (action *FileOperationsAction) FileExists(path string) bool {
 	// Stat the file and see if that succeeds; if so, check if the resource is indeed a file
 	if info, err := action.Stat(path); err == nil {
 		return info.Type == provider.ResourceType_RESOURCE_TYPE_FILE
@@ -66,7 +67,8 @@ func (action *FileInfoAction) FileExists(path string) bool {
 	}
 }
 
-func (action *FileInfoAction) DirExists(path string) bool {
+// DirExists checks whether the specified directory exists.
+func (action *FileOperationsAction) DirExists(path string) bool {
 	// Stat the file and see if that succeeds; if so, check if the resource is indeed a directory
 	if info, err := action.Stat(path); err == nil {
 		return info.Type == provider.ResourceType_RESOURCE_TYPE_CONTAINER
@@ -75,11 +77,18 @@ func (action *FileInfoAction) DirExists(path string) bool {
 	}
 }
 
-// NewFileInfoAction creates a new file info action.
-func NewFileInfoAction(session *reva.Session) (*FileInfoAction, error) {
-	action := &FileInfoAction{}
+// PathExists checks whether the specified path exists (w/o checking for its actual type).
+func (action *FileOperationsAction) PathExists(path string) bool {
+	// Stat the file and see if that succeeds
+	_, err := action.Stat(path)
+	return err == nil
+}
+
+// NewFileOperationsAction creates a new file operations action.
+func NewFileOperationsAction(session *reva.Session) (*FileOperationsAction, error) {
+	action := &FileOperationsAction{}
 	if err := action.initAction(session); err != nil {
-		return nil, fmt.Errorf("unable to create the FileInfoAction: %v", err)
+		return nil, fmt.Errorf("unable to create the FileOperationsAction: %v", err)
 	}
 	return action, nil
 }

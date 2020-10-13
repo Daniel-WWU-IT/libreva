@@ -56,11 +56,11 @@ func (action *UploadAction) UploadFile(file *os.File, target string) (*storage.R
 
 // UploadBytes uploads the provided byte data to the target; in case of an error, nil is returned.
 func (action *UploadAction) UploadBytes(data []byte, target string) (*storage.ResourceInfo, error) {
-	return action.UploadData(bytes.NewReader(data), int64(len(data)), target)
+	return action.Upload(bytes.NewReader(data), int64(len(data)), target)
 }
 
-// UploadData uploads data from the provided data reader to the target; in case of an error, nil is returned.
-func (action *UploadAction) UploadData(data io.Reader, size int64, target string) (*storage.ResourceInfo, error) {
+// Upload uploads data from the provided data reader to the target; in case of an error, nil is returned.
+func (action *UploadAction) Upload(data io.Reader, size int64, target string) (*storage.ResourceInfo, error) {
 	return action.upload(data, common.CreateDataDescriptor(filepath.Base(target), size), target)
 }
 

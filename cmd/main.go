@@ -51,7 +51,7 @@ func runActions(session *reva.Session) {
 
 				// Download the file
 				if actDl, err := action.NewDownloadAction(session); err == nil {
-					if data, err := actDl.DownloadFile(info); err == nil {
+					if data, err := actDl.Download(info); err == nil {
 						log.Printf("Downloaded %d bytes for '%v'", len(data), info.Path)
 					} else {
 						log.Printf("Unable to download data for '%v': %v", info.Path, err)

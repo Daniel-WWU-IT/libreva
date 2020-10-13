@@ -40,12 +40,12 @@ type DownloadAction struct {
 	action
 }
 
-// DownloadFileByPath retrieves data of the provided file path; in case of an error, nil is returned.
-func (action *DownloadAction) DownloadFileByPath(path string) ([]byte, error) {
+// DownloadFile retrieves data of the provided file path; in case of an error, nil is returned.
+func (action *DownloadAction) DownloadFile(path string) ([]byte, error) {
 	// Get the ResourceInfo object of the specified path
 	if fileInfoAct, err := NewFileInfoAction(action.session); err == nil {
 		if info, err := fileInfoAct.Stat(path); err == nil {
-			return action.DownloadFile(info)
+			return action.Download(info)
 		} else {
 			return nil, fmt.Errorf("the path '%v' was not found: %v", path, err)
 		}
@@ -54,8 +54,8 @@ func (action *DownloadAction) DownloadFileByPath(path string) ([]byte, error) {
 	}
 }
 
-// DownloadFile retrieves data of the provided file; in case of an error, nil is returned.
-func (action *DownloadAction) DownloadFile(fileInfo *storage.ResourceInfo) ([]byte, error) {
+// Download retrieves data of the provided file; in case of an error, nil is returned.
+func (action *DownloadAction) Download(fileInfo *storage.ResourceInfo) ([]byte, error) {
 	if fileInfo.Type != storage.ResourceType_RESOURCE_TYPE_FILE {
 		return nil, fmt.Errorf("resource is not a file")
 	}
