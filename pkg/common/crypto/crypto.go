@@ -18,8 +18,30 @@
 
 package crypto
 
-import provider "github.com/cs3org/go-cs3apis/cs3/storage/provider/v1beta1"
+import (
+	"fmt"
+	"io"
 
+	provider "github.com/cs3org/go-cs3apis/cs3/storage/provider/v1beta1"
+)
+
+// ComputeChecksum calculates the checksum of the given data using the specified checksum type.
+func ComputeChecksum(checksumType provider.ResourceChecksumType, data io.Reader) (string, error) {
+	switch checksumType {
+	case provider.ResourceChecksumType_RESOURCE_CHECKSUM_TYPE_ADLER32:
+		return ComputeAdler32Checksum(data)
+	case provider.ResourceChecksumType_RESOURCE_CHECKSUM_TYPE_MD5:
+		return ComputeMD5Checksum(data)
+	case provider.ResourceChecksumType_RESOURCE_CHECKSUM_TYPE_SHA1:
+		return ComputeSHA1Checksum(data)
+	case provider.ResourceChecksumType_RESOURCE_CHECKSUM_TYPE_UNSET:
+		return "", nil
+	default:
+		return "", fmt.Errorf("invalid checksum type: %s", checksumType)
+	}
+}
+
+// GetChecksumTypeName returns a stringified name of the given checksum type.
 func GetChecksumTypeName(checksumType provider.ResourceChecksumType) string {
 	switch checksumType {
 	case provider.ResourceChecksumType_RESOURCE_CHECKSUM_TYPE_UNSET:

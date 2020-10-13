@@ -36,7 +36,7 @@ import (
 
 func runActions(session *reva.Session) {
 	if act, err := action.NewUploadAction(session); err == nil {
-		if _, err := act.UploadFile("/home/test.txt", strings.NewReader("Hello World!\n"), common.CreateDataDescriptor("test.txt", 13), true); err == nil {
+		if _, err := act.UploadFile("/home/test.txt", strings.NewReader("Hello World!\n"), common.CreateDataDescriptor("test.txt", 13), false); err == nil {
 			//log.Printf("Uploaded file: %q [%db]", info.Path, info.Size)
 			log.Println("Upped the stuff")
 		} else {

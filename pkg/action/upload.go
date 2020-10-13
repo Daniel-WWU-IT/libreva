@@ -30,6 +30,7 @@ import (
 	storage "github.com/cs3org/go-cs3apis/cs3/storage/provider/v1beta1"
 	types "github.com/cs3org/go-cs3apis/cs3/types/v1beta1"
 
+	"github.com/Daniel-WWU-IT/libreva/pkg/common/crypto"
 	"github.com/Daniel-WWU-IT/libreva/pkg/common/net"
 	"github.com/Daniel-WWU-IT/libreva/pkg/reva"
 )
@@ -59,16 +60,30 @@ func (action *UploadAction) UploadFile(target string, data io.Reader, fileInfo o
 			}
 		} else {
 			// WebDAV is not supported, so directly write to the HTTP endpoint
-			if request, err := action.session.NewWriteRequest(upload.UploadEndpoint, upload.Token, data); err == nil {
-				if err := request.Write(target, fileInfo, action.selectChecksumType(upload.AvailableChecksums), enableTUS); err == nil {
-					// TODO: Stat new file
-					return nil, nil
-				} else {
-					return nil, fmt.Errorf("error while writing to '%v' via HTTP: %v", upload.UploadEndpoint, err)
+			checksumType := action.selectChecksumType(upload.AvailableChecksums)
+			checksumTypeName := crypto.GetChecksumTypeName(checksumType)
+			checksum, err := crypto.ComputeChecksum(checksumType, data)
+			if err != nil {
+				return nil, fmt.Errorf("unable to compute the data checksum: %v", err)
+			}
+
+			// Check if the data object can be seeked; if so, reset it to its beginning
+			if seeker, ok := data.(io.Seeker); ok {
+				seeker.Seek(0, 0)
+			}
+
+			if enableTUS {
+				if err := action.uploadFileTUS(upload, target, data, fileInfo, checksum, checksumTypeName); err != nil {
+					return nil, fmt.Errorf("error while writing to '%v' via TUS: %v", upload.UploadEndpoint, err)
 				}
 			} else {
-				return nil, fmt.Errorf("unable to create an HTTP request for '%v': %v", upload.UploadEndpoint, err)
+				if err := action.uploadFilePUT(upload, data, checksum, checksumTypeName); err != nil {
+					return nil, fmt.Errorf("error while writing to '%v' via HTTP: %v", upload.UploadEndpoint, err)
+				}
 			}
+
+			// TODO: Stat new file
+			return nil, nil
 		}
 	} else {
 		return nil, err
@@ -114,6 +129,27 @@ func (action *UploadAction) selectChecksumType(checksumTypes []*provider.Resourc
 		}
 	}
 	return selChecksumType
+}
+
+func (action *UploadAction) uploadFilePUT(upload *gateway.InitiateFileUploadResponse, data io.Reader, checksum string, checksumType string) error {
+	if request, err := action.session.NewWriteRequest(upload.UploadEndpoint, upload.Token, data); err == nil {
+		request.AddParameters(map[string]string{
+			"xs":      checksum,
+			"xs_type": checksumType,
+		})
+
+		return request.Write()
+	} else {
+		return fmt.Errorf("unable to create HTTP request for '%v': %v", upload.UploadEndpoint, err)
+	}
+}
+
+func (action *UploadAction) uploadFileTUS(upload *gateway.InitiateFileUploadResponse, target string, data io.Reader, fileInfo os.FileInfo, checksum string, checksumType string) error {
+	if tusClient, err := net.NewTUSClient(upload.UploadEndpoint, action.session.Token(), upload.Token); err == nil {
+		return tusClient.Write(data, target, fileInfo, checksumType, checksum)
+	} else {
+		return fmt.Errorf("unable to create TUS client: %v", err)
+	}
 }
 
 // NewUploadAction creates a new upload action.

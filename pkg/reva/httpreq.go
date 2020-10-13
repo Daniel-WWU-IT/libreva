@@ -23,21 +23,14 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"time"
 
-	provider "github.com/cs3org/go-cs3apis/cs3/storage/provider/v1beta1"
-
 	"github.com/Daniel-WWU-IT/libreva/pkg/common"
-	"github.com/Daniel-WWU-IT/libreva/pkg/common/crypto"
-	"github.com/Daniel-WWU-IT/libreva/pkg/common/net"
 )
 
 type HTTPRequest struct {
-	endpoint       string
-	data           io.Reader
-	accessToken    string
-	transportToken string
+	endpoint string
+	data     io.Reader
 
 	client  *http.Client
 	request *http.Request
@@ -46,8 +39,6 @@ type HTTPRequest struct {
 func (request *HTTPRequest) initRequest(session *Session, endpoint string, method string, transportToken string, data io.Reader) error {
 	request.endpoint = endpoint
 	request.data = data
-	request.accessToken = session.Token()
-	request.transportToken = transportToken
 
 	// Initialize the HTTP client
 	request.client = &http.Client{
@@ -59,21 +50,13 @@ func (request *HTTPRequest) initRequest(session *Session, endpoint string, metho
 		request.request = httpReq
 
 		// Set mandatory header values
-		request.request.Header.Set(common.AccessTokenName, request.accessToken)
-		request.request.Header.Set(common.TransportTokenName, request.transportToken)
+		request.request.Header.Set(common.AccessTokenName, session.Token())
+		request.request.Header.Set(common.TransportTokenName, transportToken)
 
 		return nil
 	} else {
 		return err
 	}
-}
-
-func (request *HTTPRequest) addParameters(params map[string]string) {
-	query := request.request.URL.Query()
-	for k, v := range params {
-		query.Add(k, v)
-	}
-	request.request.URL.RawQuery = query.Encode()
 }
 
 func (request *HTTPRequest) do() (*http.Response, error) {
@@ -85,6 +68,15 @@ func (request *HTTPRequest) do() (*http.Response, error) {
 	} else {
 		return nil, err
 	}
+}
+
+// AddParameters adds the specified parameters to the resulting query.
+func (request *HTTPRequest) AddParameters(params map[string]string) {
+	query := request.request.URL.Query()
+	for k, v := range params {
+		query.Add(k, v)
+	}
+	request.request.URL.RawQuery = query.Encode()
 }
 
 // Read reads the data from the HTTP endpoint.
@@ -103,58 +95,7 @@ func (request *HTTPRequest) Read() ([]byte, error) {
 }
 
 // Write writes data to the HTTP endpoint.
-func (request *HTTPRequest) Write(target string, fileInfo os.FileInfo, checksumType provider.ResourceChecksumType, enableTUS bool) error {
-	checksum, err := request.computeDataChecksum(checksumType, request.data)
-	if err != nil {
-		return fmt.Errorf("unable to compute the data checksum: %v", err)
-	}
-	checksumTypeName := crypto.GetChecksumTypeName(checksumType)
-
-	// Check if the data object can be seeked; if so, reset it to its beginning
-	if seeker, ok := request.data.(io.Seeker); ok {
-		seeker.Seek(0, 0)
-	}
-
-	if enableTUS {
-		return request.writeTUS(target, fileInfo, checksumTypeName, checksum)
-	} else {
-		return request.writePUT(checksumTypeName, checksum)
-	}
-}
-
-func (request *HTTPRequest) computeDataChecksum(checksumType provider.ResourceChecksumType, data io.Reader) (string, error) {
-	switch checksumType {
-	case provider.ResourceChecksumType_RESOURCE_CHECKSUM_TYPE_ADLER32:
-		return crypto.ComputeAdler32Checksum(data)
-	case provider.ResourceChecksumType_RESOURCE_CHECKSUM_TYPE_MD5:
-		return crypto.ComputeMD5Checksum(data)
-	case provider.ResourceChecksumType_RESOURCE_CHECKSUM_TYPE_SHA1:
-		return crypto.ComputeSHA1Checksum(data)
-	case provider.ResourceChecksumType_RESOURCE_CHECKSUM_TYPE_UNSET:
-		return "", nil
-	default:
-		return "", fmt.Errorf("invalid checksum type: %s", checksumType)
-	}
-}
-
-func (request *HTTPRequest) writeTUS(target string, fileInfo os.FileInfo, checksumType string, checksum string) error {
-	if tusClient, err := net.NewTUSClient(request.endpoint, request.accessToken, request.transportToken); err == nil {
-		if err := tusClient.Write(request.data, target, fileInfo, checksumType, checksum); err != nil {
-			return fmt.Errorf("writing data to '%v' via TUS failed: %v", request.endpoint, err)
-		}
-
-		return nil
-	} else {
-		return fmt.Errorf("unable to create the TUS client: %v", err)
-	}
-}
-
-func (request *HTTPRequest) writePUT(checksumType string, checksum string) error {
-	request.addParameters(map[string]string{
-		"xs":      checksum,
-		"xs_type": checksumType,
-	})
-
+func (request *HTTPRequest) Write() error {
 	if httpRes, err := request.do(); err == nil {
 		defer httpRes.Body.Close()
 		return nil
