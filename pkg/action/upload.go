@@ -32,9 +32,9 @@ import (
 	storage "github.com/cs3org/go-cs3apis/cs3/storage/provider/v1beta1"
 	types "github.com/cs3org/go-cs3apis/cs3/types/v1beta1"
 
-	"github.com/Daniel-WWU-IT/libreva/pkg/common"
-	"github.com/Daniel-WWU-IT/libreva/pkg/common/crypto"
-	"github.com/Daniel-WWU-IT/libreva/pkg/common/net"
+	"github.com/Daniel-WWU-IT/libreva/internal/common"
+	"github.com/Daniel-WWU-IT/libreva/internal/common/crypto"
+	"github.com/Daniel-WWU-IT/libreva/internal/common/net"
 	"github.com/Daniel-WWU-IT/libreva/pkg/reva"
 )
 

@@ -28,7 +28,7 @@ import (
 	types "github.com/cs3org/go-cs3apis/cs3/types/v1beta1"
 	"github.com/studio-b12/gowebdav"
 
-	"github.com/Daniel-WWU-IT/libreva/pkg/common"
+	"github.com/Daniel-WWU-IT/libreva/internal/common"
 )
 
 const (

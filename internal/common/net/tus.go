@@ -27,7 +27,7 @@ import (
 	"github.com/eventials/go-tus"
 	"github.com/eventials/go-tus/memorystore"
 
-	"github.com/Daniel-WWU-IT/libreva/pkg/common"
+	"github.com/Daniel-WWU-IT/libreva/internal/common"
 )
 
 // TUSClient is a simple client for uploading files via TUS.

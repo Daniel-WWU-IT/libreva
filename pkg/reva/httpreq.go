@@ -25,10 +25,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Daniel-WWU-IT/libreva/pkg/common"
+	"github.com/Daniel-WWU-IT/libreva/internal/common"
 )
 
-type HTTPRequest struct {
+type httpRequest struct {
 	endpoint string
 	data     io.Reader
 
@@ -36,7 +36,7 @@ type HTTPRequest struct {
 	request *http.Request
 }
 
-func (request *HTTPRequest) initRequest(session *Session, endpoint string, method string, transportToken string, data io.Reader) error {
+func (request *httpRequest) initRequest(session *Session, endpoint string, method string, transportToken string, data io.Reader) error {
 	request.endpoint = endpoint
 	request.data = data
 
@@ -59,7 +59,7 @@ func (request *HTTPRequest) initRequest(session *Session, endpoint string, metho
 	}
 }
 
-func (request *HTTPRequest) do() (*http.Response, error) {
+func (request *httpRequest) do() (*http.Response, error) {
 	if httpRes, err := request.client.Do(request.request); err == nil {
 		if httpRes.StatusCode != http.StatusOK {
 			return nil, fmt.Errorf("performing the HTTP request failed: %v", httpRes.Status)
@@ -71,7 +71,7 @@ func (request *HTTPRequest) do() (*http.Response, error) {
 }
 
 // AddParameters adds the specified parameters to the resulting query.
-func (request *HTTPRequest) AddParameters(params map[string]string) {
+func (request *httpRequest) AddParameters(params map[string]string) {
 	query := request.request.URL.Query()
 	for k, v := range params {
 		query.Add(k, v)
@@ -80,7 +80,7 @@ func (request *HTTPRequest) AddParameters(params map[string]string) {
 }
 
 // Read reads the data from the HTTP endpoint.
-func (request *HTTPRequest) Read() ([]byte, error) {
+func (request *httpRequest) Read() ([]byte, error) {
 	if httpRes, err := request.do(); err == nil {
 		defer httpRes.Body.Close()
 
@@ -95,7 +95,7 @@ func (request *HTTPRequest) Read() ([]byte, error) {
 }
 
 // Write writes data to the HTTP endpoint.
-func (request *HTTPRequest) Write() error {
+func (request *httpRequest) Write() error {
 	if httpRes, err := request.do(); err == nil {
 		defer httpRes.Body.Close()
 		return nil
@@ -104,8 +104,8 @@ func (request *HTTPRequest) Write() error {
 	}
 }
 
-func newHTTPRequest(session *Session, endpoint string, method string, transportToken string, data io.Reader) (*HTTPRequest, error) {
-	request := &HTTPRequest{}
+func newHTTPRequest(session *Session, endpoint string, method string, transportToken string, data io.Reader) (*httpRequest, error) {
+	request := &httpRequest{}
 	if err := request.initRequest(session, endpoint, method, transportToken, data); err != nil {
 		return nil, fmt.Errorf("unable to initialize the HTTP request: %v", err)
 	}

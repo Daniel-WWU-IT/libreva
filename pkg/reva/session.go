@@ -36,8 +36,8 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 
-	"github.com/Daniel-WWU-IT/libreva/pkg/common"
-	"github.com/Daniel-WWU-IT/libreva/pkg/common/net"
+	"github.com/Daniel-WWU-IT/libreva/internal/common"
+	"github.com/Daniel-WWU-IT/libreva/internal/common/net"
 )
 
 // Session stores information about a Reva session.
@@ -144,12 +144,12 @@ func (session *Session) BasicLogin(username string, password string) error {
 }
 
 // NewReadRequest returns an HTTP read request helper instance.
-func (session *Session) NewReadRequest(endpoint string, transportToken string) (*HTTPRequest, error) {
+func (session *Session) NewReadRequest(endpoint string, transportToken string) (*httpRequest, error) {
 	return newHTTPRequest(session, endpoint, "GET", transportToken, nil)
 }
 
 // NewWriteRequest returns an HTTP write request helper instance.
-func (session *Session) NewWriteRequest(endpoint string, transportToken string, data io.Reader) (*HTTPRequest, error) {
+func (session *Session) NewWriteRequest(endpoint string, transportToken string, data io.Reader) (*httpRequest, error) {
 	return newHTTPRequest(session, endpoint, "PUT", transportToken, data)
 }
 
