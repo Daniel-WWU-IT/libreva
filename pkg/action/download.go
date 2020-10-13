@@ -43,14 +43,11 @@ type DownloadAction struct {
 // DownloadFile retrieves data of the provided file path; in case of an error, nil is returned.
 func (action *DownloadAction) DownloadFile(path string) ([]byte, error) {
 	// Get the ResourceInfo object of the specified path
-	if fileInfoAct, err := NewFileOperationsAction(action.session); err == nil {
-		if info, err := fileInfoAct.Stat(path); err == nil {
-			return action.Download(info)
-		} else {
-			return nil, fmt.Errorf("the path '%v' was not found: %v", path, err)
-		}
+	fileInfoAct := MustNewFileOperationsAction(action.session)
+	if info, err := fileInfoAct.Stat(path); err == nil {
+		return action.Download(info)
 	} else {
-		return nil, fmt.Errorf("unable to create file info action: %v", err)
+		return nil, fmt.Errorf("the path '%v' was not found: %v", path, err)
 	}
 }
 
