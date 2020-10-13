@@ -35,20 +35,21 @@ import (
 )
 
 func runActions(session *reva.Session) {
+	// Try uploading
 	if act, err := action.NewUploadAction(session); err == nil {
-		if _, err := act.UploadFile("/home/test.txt", strings.NewReader("Hello World!\n"), common.CreateDataDescriptor("test.txt", 13), false); err == nil {
-			//log.Printf("Uploaded file: %q [%db]", info.Path, info.Size)
-			log.Println("Upped the stuff")
+		if info, err := act.UploadFile("/home/test.txt", strings.NewReader("Hello World!\n"), common.CreateDataDescriptor("test.txt", 13), false); err == nil {
+			log.Printf("Uploaded file: %s [%db] -- %s", info.Path, info.Size, info.Type)
 		} else {
 			log.Printf("Can't upload file: %v", err)
 		}
 	}
 	fmt.Println()
 
+	// Try listing and downloading
 	if act, err := action.NewEnumFilesAction(session); err == nil {
 		if files, err := act.ListFiles("/home", true); err == nil {
 			for _, info := range files {
-				fmt.Printf("%s [%db] -- %s\n", info.Path, info.Size, info.Type)
+				log.Printf("%s [%db] -- %s", info.Path, info.Size, info.Type)
 
 				// Download the file
 				if actDl, err := action.NewDownloadAction(session); err == nil {
@@ -59,10 +60,26 @@ func runActions(session *reva.Session) {
 					}
 				}
 
-				fmt.Println()
+				log.Println("---")
 			}
 		} else {
 			log.Printf("Can't list files: %v", err)
+		}
+	}
+	fmt.Println()
+
+	// Try accessing some files and directories
+	if act, err := action.NewFileInfoAction(session); err == nil {
+		if act.FileExists("/home/blargh.txt") {
+			log.Println("File '/home/blargh.txt' found")
+		} else {
+			log.Println("File '/home/blargh.txt' NOT found")
+		}
+
+		if act.DirExists("/home") {
+			log.Println("Directory '/home' found")
+		} else {
+			log.Println("Directory '/home' NOT found")
 		}
 	}
 	fmt.Println()

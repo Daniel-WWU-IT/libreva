@@ -104,8 +104,8 @@ func (action *EnumFilesAction) ListFiles(path string, includeSubdirectories bool
 	})
 }
 
-// ListDirectories retrieves all directories contained in the provided path.
-func (action *EnumFilesAction) ListDirectories(path string, includeSubdirectories bool) ([]*storage.ResourceInfo, error) {
+// ListDirs retrieves all directories contained in the provided path.
+func (action *EnumFilesAction) ListDirs(path string, includeSubdirectories bool) ([]*storage.ResourceInfo, error) {
 	return action.ListAllWithFilter(path, includeSubdirectories, func(fi *storage.ResourceInfo) bool {
 		return fi.Type == storage.ResourceType_RESOURCE_TYPE_CONTAINER
 	})

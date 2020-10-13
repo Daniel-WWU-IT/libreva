@@ -52,10 +52,7 @@ func (action *UploadAction) UploadFile(target string, data io.Reader, fileInfo o
 	if upload, err := action.initiateUpload(target, fileInfo.Size()); err == nil {
 		// Try to upload the file via WebDAV first
 		if client, err := net.NewWebDAVClient(upload.UploadEndpoint, upload.Opaque); err == nil {
-			if err := client.Write(data, fileInfo.Size()); err == nil {
-				// TODO: Stat new file
-				return nil, nil
-			} else {
+			if err := client.Write(data, fileInfo.Size()); err != nil {
 				return nil, fmt.Errorf("error while writing to '%v' via WebDAV: %v", upload.UploadEndpoint, err)
 			}
 		} else {
@@ -64,7 +61,7 @@ func (action *UploadAction) UploadFile(target string, data io.Reader, fileInfo o
 			checksumTypeName := crypto.GetChecksumTypeName(checksumType)
 			checksum, err := crypto.ComputeChecksum(checksumType, data)
 			if err != nil {
-				return nil, fmt.Errorf("unable to compute the data checksum: %v", err)
+				return nil, fmt.Errorf("unable to compute data checksum: %v", err)
 			}
 
 			// Check if the data object can be seeked; if so, reset it to its beginning
@@ -81,12 +78,20 @@ func (action *UploadAction) UploadFile(target string, data io.Reader, fileInfo o
 					return nil, fmt.Errorf("error while writing to '%v' via HTTP: %v", upload.UploadEndpoint, err)
 				}
 			}
-
-			// TODO: Stat new file
-			return nil, nil
 		}
 	} else {
 		return nil, err
+	}
+
+	// Query information about the just-uploaded file
+	if fileInfoAct, err := NewFileInfoAction(action.session); err == nil {
+		if info, err := fileInfoAct.Stat(target); err == nil {
+			return info, nil
+		} else {
+			return nil, fmt.Errorf("the uploaded data was not written to the target file: %v", err)
+		}
+	} else {
+		return nil, fmt.Errorf("unable to create file info action: %v", err)
 	}
 }
 
