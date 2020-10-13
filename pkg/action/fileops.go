@@ -49,7 +49,7 @@ func (action *FileOperationsAction) Stat(path string) (*storage.ResourceInfo, er
 	req := &provider.StatRequest{Ref: ref}
 
 	if res, err := action.session.Client().Stat(action.session.Context(), req); err == nil {
-		if err := net.CheckRPCStatus(res.Status); err != nil {
+		if err := net.CheckRPCStatus("querying resource information", res.Status); err != nil {
 			return nil, err
 		}
 
@@ -102,7 +102,7 @@ func (action *FileOperationsAction) MakePath(path string) error {
 			req := &provider.CreateContainerRequest{Ref: ref}
 
 			if res, err := action.session.Client().CreateContainer(action.session.Context(), req); err == nil {
-				if err := net.CheckRPCStatus(res.Status); err != nil {
+				if err := net.CheckRPCStatus("creating container", res.Status); err != nil {
 					return err
 				}
 			} else {
@@ -136,7 +136,7 @@ func (action *FileOperationsAction) Move(source string, target string) error {
 	req := &provider.MoveRequest{Source: sourceRef, Destination: targetRef}
 
 	if res, err := action.session.Client().Move(action.session.Context(), req); err == nil {
-		if err := net.CheckRPCStatus(res.Status); err != nil {
+		if err := net.CheckRPCStatus("moving resource", res.Status); err != nil {
 			return err
 		}
 
@@ -164,7 +164,7 @@ func (action *FileOperationsAction) Remove(path string) error {
 	req := &provider.DeleteRequest{Ref: ref}
 
 	if res, err := action.session.Client().Delete(action.session.Context(), req); err == nil {
-		if err := net.CheckRPCStatus(res.Status); err != nil {
+		if err := net.CheckRPCStatus("deleting resource", res.Status); err != nil {
 			return err
 		}
 

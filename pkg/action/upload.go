@@ -137,7 +137,7 @@ func (action *UploadAction) initiateUpload(target string, size int64) (*gateway.
 	}
 
 	if res, err := action.session.Client().InitiateFileUpload(action.session.Context(), req); err == nil {
-		if err := net.CheckRPCStatus(res.Status); err != nil {
+		if err := net.CheckRPCStatus("initiating upload", res.Status); err != nil {
 			return nil, err
 		}
 

@@ -87,7 +87,7 @@ func (session *Session) getConnection(host string, insecure bool) (*grpc.ClientC
 func (session *Session) GetLoginMethods() ([]string, error) {
 	req := &registry.ListAuthProvidersRequest{}
 	if res, err := session.client.ListAuthProviders(session.ctx, req); err == nil {
-		if err := net.CheckRPCStatus(res.Status); err != nil {
+		if err := net.CheckRPCStatus("listing authorization providers", res.Status); err != nil {
 			return []string{}, err
 		}
 
@@ -110,7 +110,7 @@ func (session *Session) Login(method string, username string, password string) e
 	}
 
 	if res, err := session.client.Authenticate(session.ctx, req); err == nil {
-		if err := net.CheckRPCStatus(res.Status); err != nil {
+		if err := net.CheckRPCStatus("authenticating", res.Status); err != nil {
 			return err
 		}
 

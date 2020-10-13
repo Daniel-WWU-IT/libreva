@@ -46,7 +46,7 @@ func (action *EnumFilesAction) ListAll(path string, includeSubdirectories bool) 
 	req := &storage.ListContainerRequest{Ref: ref}
 
 	if res, err := action.session.Client().ListContainer(action.session.Context(), req); err == nil {
-		if err := net.CheckRPCStatus(res.Status); err != nil {
+		if err := net.CheckRPCStatus("listing container", res.Status); err != nil {
 			return []*storage.ResourceInfo{}, err
 		}
 

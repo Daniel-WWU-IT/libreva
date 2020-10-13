@@ -24,9 +24,9 @@ import (
 	rpc "github.com/cs3org/go-cs3apis/cs3/rpc/v1beta1"
 )
 
-func CheckRPCStatus(status *rpc.Status) error {
+func CheckRPCStatus(operation string, status *rpc.Status) error {
 	if status.Code != rpc.Code_CODE_OK {
-		return fmt.Errorf("%q (code=%+v, trace=%q)", status.Message, status.Code, status.Trace)
+		return fmt.Errorf("%s: %q (code=%+v, trace=%q)", operation, status.Message, status.Code, status.Trace)
 	} else {
 		return nil
 	}

@@ -97,7 +97,7 @@ func (action *DownloadAction) initiateDownload(fileInfo *storage.ResourceInfo) (
 	}
 
 	if res, err := action.session.Client().InitiateFileDownload(action.session.Context(), req); err == nil {
-		if err := net.CheckRPCStatus(res.Status); err != nil {
+		if err := net.CheckRPCStatus("initiating download", res.Status); err != nil {
 			return nil, err
 		}
 
