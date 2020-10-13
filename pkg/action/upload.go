@@ -24,7 +24,7 @@ import (
 	"io"
 	"math"
 	"os"
-	"path/filepath"
+	p "path"
 	"strconv"
 
 	gateway "github.com/cs3org/go-cs3apis/cs3/gateway/v1beta1"
@@ -54,6 +54,11 @@ func (action *UploadAction) UploadFile(file *os.File, target string) (*storage.R
 	}
 }
 
+// UploadFileTo uploads the provided file to the target directory, keeping the original file name; in case of an error, nil is returned.
+func (action *UploadAction) UploadFileTo(file *os.File, path string) (*storage.ResourceInfo, error) {
+	return action.UploadFile(file, p.Join(path, p.Base(file.Name())))
+}
+
 // UploadBytes uploads the provided byte data to the target; in case of an error, nil is returned.
 func (action *UploadAction) UploadBytes(data []byte, target string) (*storage.ResourceInfo, error) {
 	return action.Upload(bytes.NewReader(data), int64(len(data)), target)
@@ -61,15 +66,16 @@ func (action *UploadAction) UploadBytes(data []byte, target string) (*storage.Re
 
 // Upload uploads data from the provided data reader to the target; in case of an error, nil is returned.
 func (action *UploadAction) Upload(data io.Reader, size int64, target string) (*storage.ResourceInfo, error) {
-	return action.upload(data, common.CreateDataDescriptor(filepath.Base(target), size), target)
+	return action.upload(data, common.CreateDataDescriptor(p.Base(target), size), target)
 }
 
 func (action *UploadAction) upload(data io.Reader, dataInfo os.FileInfo, target string) (*storage.ResourceInfo, error) {
-	if target == "" {
-		return nil, fmt.Errorf("no target specified")
-	}
+	fileOpsAct := MustNewFileOperationsAction(action.session)
 
-	// TODO: Make target dirs
+	dir := p.Dir(target)
+	if err := fileOpsAct.MakePath(dir); err != nil {
+		return nil, fmt.Errorf("unable to create target directory '%v': %v", dir, err)
+	}
 
 	// Issue a file upload request to Reva; this will provide the endpoint to write the file data to
 	if upload, err := action.initiateUpload(target, dataInfo.Size()); err == nil {
@@ -106,16 +112,8 @@ func (action *UploadAction) upload(data io.Reader, dataInfo os.FileInfo, target 
 		return nil, err
 	}
 
-	// Query information about the just-uploaded file
-	if fileInfoAct, err := NewFileOperationsAction(action.session); err == nil {
-		if info, err := fileInfoAct.Stat(target); err == nil {
-			return info, nil
-		} else {
-			return nil, fmt.Errorf("the uploaded data was not written to the target file: %v", err)
-		}
-	} else {
-		return nil, fmt.Errorf("unable to create file info action: %v", err)
-	}
+	// Return information about the just-uploaded file
+	return fileOpsAct.Stat(target)
 }
 
 func (action *UploadAction) initiateUpload(target string, size int64) (*gateway.InitiateFileUploadResponse, error) {

@@ -120,13 +120,6 @@ func (action *FileOperationsAction) MakePath(path string) error {
 
 // Move moves the specified path to a new location. If moving a file, the caller must ensure that the target directory exists.
 func (action *FileOperationsAction) Move(source string, target string) error {
-	if !action.ResourceExists(source) {
-		return fmt.Errorf("the source '%v' doesn't exist", source)
-	}
-	if action.ResourceExists(target) {
-		return fmt.Errorf("the target '%v' already exists", source)
-	}
-
 	sourceRef := &provider.Reference{
 		Spec: &provider.Reference_Path{Path: source},
 	}

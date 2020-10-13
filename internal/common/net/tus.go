@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
+	"path"
 
 	"github.com/eventials/go-tus"
 	"github.com/eventials/go-tus/memorystore"
@@ -66,11 +66,11 @@ func (client *TUSClient) initClient(endpoint string, accessToken string, transpo
 // Write writes data from a stream to the endpoint.
 func (client *TUSClient) Write(data io.Reader, target string, fileInfo os.FileInfo, checksumType string, checksum string) error {
 	metadata := map[string]string{
-		"filename": filepath.Base(target),
-		"dir":      filepath.Dir(target),
+		"filename": path.Base(target),
+		"dir":      path.Dir(target),
 		"checksum": fmt.Sprintf("%s %s", checksumType, checksum),
 	}
-	fingerprint := fmt.Sprintf("%s-%d-%s-%s", filepath.Base(target), fileInfo.Size(), fileInfo.ModTime(), checksum)
+	fingerprint := fmt.Sprintf("%s-%d-%s-%s", path.Base(target), fileInfo.Size(), fileInfo.ModTime(), checksum)
 
 	upload := tus.NewUpload(data, fileInfo.Size(), metadata, fingerprint)
 	client.config.Store.Set(upload.Fingerprint, client.client.Url)
