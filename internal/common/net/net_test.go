@@ -26,11 +26,14 @@ package net
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	rpc "github.com/cs3org/go-cs3apis/cs3/rpc/v1beta1"
+	provider "github.com/cs3org/go-cs3apis/cs3/storage/provider/v1beta1"
 
 	"github.com/Daniel-WWU-IT/libreva/internal/common"
+	"github.com/Daniel-WWU-IT/libreva/internal/common/crypto"
 )
 
 func TestCheckRPCStatus(t *testing.T) {
@@ -44,5 +47,19 @@ func TestCheckRPCStatus(t *testing.T) {
 	status.Code = rpc.Code_CODE_PERMISSION_DENIED
 	if err := CheckRPCStatus("fail-check", &status); err == nil {
 		t.Errorf(common.FormatTestError("CheckRPCStatus", fmt.Errorf("accepted an invalid RPC status"), "fail-check", status))
+	}
+}
+
+func TestTUSClient(t *testing.T) {
+	if client, err := NewTUSClient("https://tusd.tusdemo.net/files/", "", ""); err == nil {
+		data := strings.NewReader("This is a simple TUS test to the tus.io public tusd server")
+		dataDesc := common.CreateDataDescriptor("tus-test.txt", data.Size())
+		checksumTypeName := crypto.GetChecksumTypeName(provider.ResourceChecksumType_RESOURCE_CHECKSUM_TYPE_MD5)
+
+		if err := client.Write(data, "tus-test.txt", &dataDesc, checksumTypeName, ""); err != nil {
+			t.Errorf(common.FormatTestError("TUSClient.Write", err, data, "tus-test.txt", &dataDesc, checksumTypeName, ""))
+		}
+	} else {
+		t.Errorf(common.FormatTestError("NewTUSClient", err, "http://tusd.tusdemo.net/files/", "", ""))
 	}
 }

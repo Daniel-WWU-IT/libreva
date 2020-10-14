@@ -21,8 +21,11 @@ package net
 import (
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path"
+	"strings"
+	"time"
 
 	"github.com/eventials/go-tus"
 	"github.com/eventials/go-tus/memorystore"
@@ -34,6 +37,8 @@ import (
 type TUSClient struct {
 	config *tus.Config
 	client *tus.Client
+
+	supportsResourceCreation bool
 }
 
 func (client *TUSClient) initClient(endpoint string, accessToken string, transportToken string) error {
@@ -47,7 +52,9 @@ func (client *TUSClient) initClient(endpoint string, accessToken string, transpo
 		return fmt.Errorf("unable to create a TUS memory store: %v", err)
 	}
 
-	client.config.Header.Add(common.AccessTokenName, accessToken)
+	if accessToken != "" {
+		client.config.Header.Add(common.AccessTokenName, accessToken)
+	}
 
 	if transportToken != "" {
 		client.config.Header.Add(common.TransportTokenName, transportToken)
@@ -60,7 +67,29 @@ func (client *TUSClient) initClient(endpoint string, accessToken string, transpo
 		return fmt.Errorf("error creating the TUS client: %v", err)
 	}
 
+	// Check if the TUS server supports resource creation
+	client.supportsResourceCreation = client.checkEndpointCreationOption(endpoint)
+
 	return nil
+}
+
+func (client *TUSClient) checkEndpointCreationOption(endpoint string) bool {
+	// Perform an OPTIONS request to the endpoint; if this succeeds, check if the header "Tus-Extension"
+	// contains the "creation" flag
+	httpClient := &http.Client{
+		Timeout: time.Duration(1 * time.Second),
+	}
+
+	if httpReq, err := http.NewRequest("OPTIONS", endpoint, nil); err == nil {
+		if res, err := httpClient.Do(httpReq); err == nil {
+			if res.StatusCode == http.StatusOK {
+				ext := strings.Split(res.Header.Get("Tus-Extension"), ",")
+				return common.FindStringNoCase(ext, "creation") != -1
+			}
+		}
+	}
+
+	return false
 }
 
 // Write writes data from a stream to the endpoint.
@@ -74,7 +103,17 @@ func (client *TUSClient) Write(data io.Reader, target string, fileInfo os.FileIn
 
 	upload := tus.NewUpload(data, fileInfo.Size(), metadata, fingerprint)
 	client.config.Store.Set(upload.Fingerprint, client.client.Url)
-	uploader := tus.NewUploader(client.client, client.client.Url, upload, 0)
+
+	var uploader *tus.Uploader
+	if client.supportsResourceCreation {
+		if upldr, err := client.client.CreateUpload(upload); err == nil {
+			uploader = upldr
+		} else {
+			return fmt.Errorf("unable to perform the TUS resource creation for '%v': %v", client.client.Url, err)
+		}
+	} else {
+		uploader = tus.NewUploader(client.client, client.client.Url, upload, 0)
+	}
 
 	if err := uploader.Upload(); err != nil {
 		return fmt.Errorf("unable to perform the TUS upload for '%v': %v", client.client.Url, err)

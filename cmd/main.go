@@ -58,6 +58,7 @@ func runActions(session *reva.Session) {
 	// Try uploading
 	{
 		act := action.MustNewUploadAction(session)
+		act.EnableTUS = true
 		if info, err := act.UploadBytes([]byte("HELLO WORLD!\n"), "/home/subdir/tests.txt"); err == nil {
 			log.Printf("Uploaded file: %s [%db] -- %s", info.Path, info.Size, info.Type)
 		} else {
@@ -120,7 +121,7 @@ func runActions(session *reva.Session) {
 
 func main() {
 	session := reva.MustNewSession()
-	if err := session.Initiate("sciencemesh-tests.uni-muenster.de:9600", false); err != nil {
+	if err := session.Initiate("sciencemesh-test.uni-muenster.de:9600", false); err != nil {
 		log.Fatalf("Can't initiate Reva session: %v", err)
 	}
 
