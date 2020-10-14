@@ -53,8 +53,8 @@ func (ddesc *DataDescriptor) Sys() interface{} {
 	return nil
 }
 
-func CreateDataDescriptor(name string, size int64) *DataDescriptor {
-	return &DataDescriptor{
+func CreateDataDescriptor(name string, size int64) DataDescriptor {
+	return DataDescriptor{
 		name: name,
 		size: size,
 	}

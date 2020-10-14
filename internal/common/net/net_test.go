@@ -22,28 +22,27 @@
  * SOFTWARE.
  */
 
-package common
+package net
 
 import (
-	"strings"
+	"fmt"
+	"testing"
+
+	rpc "github.com/cs3org/go-cs3apis/cs3/rpc/v1beta1"
+
+	"github.com/Daniel-WWU-IT/libreva/internal/common"
 )
 
-// FindString performs a case-sensitive string search in a string vector.
-func FindString(a []string, x string) int {
-	for i, n := range a {
-		if x == n {
-			return i
-		}
+func TestCheckRPCStatus(t *testing.T) {
+	status := rpc.Status{
+		Code: rpc.Code_CODE_OK,
 	}
-	return -1
-}
+	if err := CheckRPCStatus("ok-check", &status); err != nil {
+		t.Errorf(common.FormatTestError("CheckRPCStatus", err, "ok-check", status))
+	}
 
-// FindStringNoCase performs a case-insensitive string search in a string vector.
-func FindStringNoCase(a []string, x string) int {
-	for i, n := range a {
-		if strings.EqualFold(x, n) {
-			return i
-		}
+	status.Code = rpc.Code_CODE_PERMISSION_DENIED
+	if err := CheckRPCStatus("fail-check", &status); err == nil {
+		t.Errorf(common.FormatTestError("CheckRPCStatus", fmt.Errorf("accepted an invalid RPC status"), "fail-check", status))
 	}
-	return -1
 }

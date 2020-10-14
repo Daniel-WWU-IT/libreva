@@ -66,7 +66,8 @@ func (action *UploadAction) UploadBytes(data []byte, target string) (*storage.Re
 
 // Upload uploads data from the provided data reader to the target; in case of an error, nil is returned.
 func (action *UploadAction) Upload(data io.Reader, size int64, target string) (*storage.ResourceInfo, error) {
-	return action.upload(data, common.CreateDataDescriptor(p.Base(target), size), target)
+	dataDesc := common.CreateDataDescriptor(p.Base(target), size)
+	return action.upload(data, &dataDesc, target)
 }
 
 func (action *UploadAction) upload(data io.Reader, dataInfo os.FileInfo, target string) (*storage.ResourceInfo, error) {

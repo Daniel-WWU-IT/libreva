@@ -25,25 +25,28 @@
 package common
 
 import (
+	"fmt"
 	"strings"
 )
 
-// FindString performs a case-sensitive string search in a string vector.
-func FindString(a []string, x string) int {
-	for i, n := range a {
-		if x == n {
-			return i
-		}
+func formatTestMessage(funcName string, msg string, params ...interface{}) string {
+	// Format parameter list
+	paramList := make([]string, 0, len(params))
+	for _, param := range params {
+		paramList = append(paramList, fmt.Sprintf("%#v", param))
 	}
-	return -1
+
+	return fmt.Sprintf("%s(%s) -> %s", funcName, strings.Join(paramList, ", "), msg)
 }
 
-// FindStringNoCase performs a case-insensitive string search in a string vector.
-func FindStringNoCase(a []string, x string) int {
-	for i, n := range a {
-		if strings.EqualFold(x, n) {
-			return i
-		}
-	}
-	return -1
+// FormatTestResult formats a function call along with its parameters, result and expected result.
+func FormatTestResult(funcName string, wants interface{}, got interface{}, params ...interface{}) string {
+	msg := fmt.Sprintf("Got: %#v; Wants: %#v", got, wants)
+	return formatTestMessage(funcName, msg, params...)
+}
+
+// FormatTestError formats a function error.
+func FormatTestError(funcName string, err error, params ...interface{}) string {
+	msg := fmt.Sprintf("Error: %v", err)
+	return formatTestMessage(funcName, msg, params...)
 }
