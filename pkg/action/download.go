@@ -69,7 +69,7 @@ func (action *DownloadAction) Download(fileInfo *storage.ResourceInfo) ([]byte, 
 		} else {
 			// WebDAV is not supported, so directly read the HTTP endpoint
 			if request, err := action.session.NewReadRequest(download.DownloadEndpoint, download.Token); err == nil {
-				if data, err := request.Read(); err == nil {
+				if data, err := request.Do(); err == nil {
 					return data, nil
 				} else {
 					return nil, fmt.Errorf("error while reading from '%v' via HTTP: %v", download.DownloadEndpoint, err)

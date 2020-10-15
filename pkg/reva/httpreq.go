@@ -79,28 +79,18 @@ func (request *httpRequest) AddParameters(params map[string]string) {
 	request.request.URL.RawQuery = query.Encode()
 }
 
-// Read reads the data from the HTTP endpoint.
-func (request *httpRequest) Read() ([]byte, error) {
+// Do performs the request on the HTTP endpoint and returns the body data.
+func (request *httpRequest) Do() ([]byte, error) {
 	if httpRes, err := request.do(); err == nil {
 		defer httpRes.Body.Close()
 
 		if data, err := ioutil.ReadAll(httpRes.Body); err == nil {
 			return data, nil
 		} else {
-			return nil, fmt.Errorf("reading data from '%v' failed: %v", request.endpoint, err)
+			return nil, fmt.Errorf("reading response data from '%v' failed: %v", request.endpoint, err)
 		}
 	} else {
 		return nil, fmt.Errorf("unable to perform the HTTP request for '%v': %v", request.endpoint, err)
-	}
-}
-
-// Write writes data to the HTTP endpoint.
-func (request *httpRequest) Write() error {
-	if httpRes, err := request.do(); err == nil {
-		defer httpRes.Body.Close()
-		return nil
-	} else {
-		return fmt.Errorf("unable to perform the HTTP request for '%v': %v", request.endpoint, err)
 	}
 }
 

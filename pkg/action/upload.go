@@ -165,7 +165,8 @@ func (action *UploadAction) uploadFilePUT(upload *gateway.InitiateFileUploadResp
 			"xs_type": checksumType,
 		})
 
-		return request.Write()
+		_, err := request.Do()
+		return err
 	} else {
 		return fmt.Errorf("unable to create HTTP request for '%v': %v", upload.UploadEndpoint, err)
 	}

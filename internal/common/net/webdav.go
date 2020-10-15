@@ -96,15 +96,15 @@ func newWebDAVClient(endpoint string, userName string, password string, accessTo
 	return client, nil
 }
 
-// NewWebDAVClient creates a new WebDAV client using an access token.
-func NewWebDAVClient(endpoint string, accessToken string) (*WebDAVClient, error) {
+// NewWebDAVClientWithAccessToken creates a new WebDAV client using an access token.
+func NewWebDAVClientWithAccessToken(endpoint string, accessToken string) (*WebDAVClient, error) {
 	return newWebDAVClient(endpoint, "", "", accessToken)
 }
 
 // NewWebDAVClientWithOpaque creates a new WebDAV client using the information stored in the opaque.
 func NewWebDAVClientWithOpaque(endpoint string, opaque *types.Opaque) (*WebDAVClient, map[string]string, error) {
 	if values, err := common.GetValuesFromOpaque(opaque, []string{WebDAVTokenName, WebDAVPathName}, true); err == nil {
-		if client, err := NewWebDAVClient(endpoint, values[WebDAVTokenName]); err == nil {
+		if client, err := NewWebDAVClientWithAccessToken(endpoint, values[WebDAVTokenName]); err == nil {
 			return client, values, nil
 		} else {
 			return nil, nil, err
@@ -114,7 +114,7 @@ func NewWebDAVClientWithOpaque(endpoint string, opaque *types.Opaque) (*WebDAVCl
 	}
 }
 
-// NewWebDAVClientWithCredentials creates a new WebDAV client with user credentials.
-func NewWebDAVClientWithCredentials(endpoint string, userName string, password string) (*WebDAVClient, error) {
+// NewWebDAVClient creates a new WebDAV client with user credentials.
+func NewWebDAVClient(endpoint string, userName string, password string) (*WebDAVClient, error) {
 	return newWebDAVClient(endpoint, userName, password, "")
 }

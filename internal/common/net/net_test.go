@@ -89,7 +89,7 @@ func TestWebDAVClient(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.endpoint, func(t *testing.T) {
-			if client, err := NewWebDAVClientWithCredentials(test.endpoint, "testUser", "test12345"); err == nil {
+			if client, err := NewWebDAVClient(test.endpoint, "testUser", "test12345"); err == nil {
 				const fileName = "webdav-test.txt"
 
 				data := strings.NewReader("This is a simple WebDAV test")
