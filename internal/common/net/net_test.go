@@ -66,14 +66,48 @@ func TestTUSClient(t *testing.T) {
 				dataDesc := common.CreateDataDescriptor("tus-test.txt", data.Size())
 				checksumTypeName := crypto.GetChecksumTypeName(provider.ResourceChecksumType_RESOURCE_CHECKSUM_TYPE_MD5)
 
-				err := client.Write(data, dataDesc.Name(), &dataDesc, checksumTypeName, "")
-				if err != nil && test.shouldSucceed {
+				if err := client.Write(data, dataDesc.Name(), &dataDesc, checksumTypeName, ""); err != nil && test.shouldSucceed {
 					t.Errorf(common.FormatTestError("TUSClient.Write", err, data, dataDesc.Name(), &dataDesc, checksumTypeName, ""))
 				} else if err == nil && !test.shouldSucceed {
 					t.Errorf(common.FormatTestError("TUSClient.Write", fmt.Errorf("writing to a non-TUS host succeeded"), data, dataDesc.Name(), &dataDesc, checksumTypeName, ""))
 				}
 			} else {
 				t.Errorf(common.FormatTestError("NewTUSClient", err, test.endpoint, "", ""))
+			}
+		})
+	}
+}
+
+func TestWebDAVClient(t *testing.T) {
+	tests := []struct {
+		endpoint      string
+		shouldSucceed bool
+	}{
+		{"https://zivowncloud2.uni-muenster.de/owncloud/remote.php/dav/files/testUser/", true},
+		{"https://google.de", false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.endpoint, func(t *testing.T) {
+			if client, err := NewWebDAVClientWithCredentials(test.endpoint, "testUser", "test12345"); err == nil {
+				const fileName = "webdav-test.txt"
+
+				data := strings.NewReader("This is a simple WebDAV test")
+				if err := client.Write(fileName, data, data.Size()); err == nil && test.shouldSucceed {
+					if _, err := client.Read(fileName); err != nil {
+						t.Errorf(common.FormatTestError("WebDAVClient.Read", err))
+					}
+
+					if err := client.Remove(fileName); err != nil {
+						t.Errorf(common.FormatTestError("WebDAVClient.Remove", err))
+					}
+				} else if err != nil && test.shouldSucceed {
+					t.Errorf(common.FormatTestError("WebDAVClient.Write", err, fileName, data, data.Size()))
+				} else if err == nil && !test.shouldSucceed {
+					t.Errorf(common.FormatTestError("WebDAVClient.Write", fmt.Errorf("writing to a non-WebDAV host succeeded"), fileName, data, data.Size()))
+				}
+			} else {
+				t.Errorf(common.FormatTestError("NewWebDavClient", err, test.endpoint, "testUser", "test12345"))
 			}
 		})
 	}

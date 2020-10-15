@@ -60,8 +60,8 @@ func (action *DownloadAction) Download(fileInfo *storage.ResourceInfo) ([]byte, 
 	// Issue a file download request to Reva; this will provide the endpoint to read the file data from
 	if download, err := action.initiateDownload(fileInfo); err == nil {
 		// Try to get the file via WebDAV first
-		if client, err := net.NewWebDAVClientWithOpaque(download.DownloadEndpoint, download.Opaque); err == nil {
-			if data, err := client.Read(); err == nil {
+		if client, values, err := net.NewWebDAVClientWithOpaque(download.DownloadEndpoint, download.Opaque); err == nil {
+			if data, err := client.Read(values[net.WebDAVPathName]); err == nil {
 				return data, nil
 			} else {
 				return nil, fmt.Errorf("error while reading from '%v' via WebDAV: %v", download.DownloadEndpoint, err)

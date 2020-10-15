@@ -38,16 +38,9 @@ const (
 // WebDAVClient is a simple client for down- and uploading files via WebDAV.
 type WebDAVClient struct {
 	client *gowebdav.Client
-
-	filePath string
 }
 
-func (webdav *WebDAVClient) initClient(endpoint string, filePath string, userName string, password string, accessToken string) error {
-	if filePath == "" {
-		return fmt.Errorf("no file path specified")
-	}
-	webdav.filePath = filePath
-
+func (webdav *WebDAVClient) initClient(endpoint string, userName string, password string, accessToken string) error {
 	// Create the WebDAV client
 	webdav.client = gowebdav.NewClient(endpoint, userName, password)
 
@@ -59,8 +52,8 @@ func (webdav *WebDAVClient) initClient(endpoint string, filePath string, userNam
 }
 
 // Read reads all data from the endpoint.
-func (webdav *WebDAVClient) Read() ([]byte, error) {
-	if reader, err := webdav.client.ReadStream(webdav.filePath); err == nil {
+func (webdav *WebDAVClient) Read(file string) ([]byte, error) {
+	if reader, err := webdav.client.ReadStream(file); err == nil {
 		defer reader.Close()
 
 		if data, err := ioutil.ReadAll(reader); err == nil {
@@ -74,11 +67,11 @@ func (webdav *WebDAVClient) Read() ([]byte, error) {
 }
 
 // Write writes data from a stream to the endpoint.
-func (webdav *WebDAVClient) Write(data io.Reader, size int64) error {
+func (webdav *WebDAVClient) Write(file string, data io.Reader, size int64) error {
 	if size > 0 {
 		webdav.client.SetHeader("Upload-Length", strconv.FormatInt(size, 10))
 
-		if err := webdav.client.WriteStream(webdav.filePath, data, 0700); err != nil {
+		if err := webdav.client.WriteStream(file, data, 0700); err != nil {
 			return fmt.Errorf("unable to write the data: %v", err)
 		}
 	}
@@ -86,29 +79,42 @@ func (webdav *WebDAVClient) Write(data io.Reader, size int64) error {
 	return nil
 }
 
-func newWebDAVClient(endpoint string, filePath string, userName string, password string, accessToken string) (*WebDAVClient, error) {
+// Remove deletes the entire file/path.
+func (webdav *WebDAVClient) Remove(path string) error {
+	if err := webdav.client.Remove(path); err != nil {
+		return fmt.Errorf("error removing '%v' :%v", path, err)
+	}
+
+	return nil
+}
+
+func newWebDAVClient(endpoint string, userName string, password string, accessToken string) (*WebDAVClient, error) {
 	client := &WebDAVClient{}
-	if err := client.initClient(endpoint, filePath, userName, password, accessToken); err != nil {
+	if err := client.initClient(endpoint, userName, password, accessToken); err != nil {
 		return nil, fmt.Errorf("unable to create the WebDAV client: %v", err)
 	}
 	return client, nil
 }
 
 // NewWebDAVClient creates a new WebDAV client using an access token.
-func NewWebDAVClient(endpoint string, filePath string, accessToken string) (*WebDAVClient, error) {
-	return newWebDAVClient(endpoint, filePath, "", "", accessToken)
+func NewWebDAVClient(endpoint string, accessToken string) (*WebDAVClient, error) {
+	return newWebDAVClient(endpoint, "", "", accessToken)
 }
 
 // NewWebDAVClientWithOpaque creates a new WebDAV client using the information stored in the opaque.
-func NewWebDAVClientWithOpaque(endpoint string, opaque *types.Opaque) (*WebDAVClient, error) {
+func NewWebDAVClientWithOpaque(endpoint string, opaque *types.Opaque) (*WebDAVClient, map[string]string, error) {
 	if values, err := common.GetValuesFromOpaque(opaque, []string{WebDAVTokenName, WebDAVPathName}, true); err == nil {
-		return NewWebDAVClient(endpoint, values[WebDAVPathName], values[WebDAVTokenName])
+		if client, err := NewWebDAVClient(endpoint, values[WebDAVTokenName]); err == nil {
+			return client, values, nil
+		} else {
+			return nil, nil, err
+		}
 	} else {
-		return nil, fmt.Errorf("invalid opaque object: %v", err)
+		return nil, nil, fmt.Errorf("invalid opaque object: %v", err)
 	}
 }
 
 // NewWebDAVClientWithCredentials creates a new WebDAV client with user credentials.
-func NewWebDAVClientWithCredentials(endpoint string, filePath string, userName string, password string) (*WebDAVClient, error) {
-	return newWebDAVClient(endpoint, filePath, userName, password, "")
+func NewWebDAVClientWithCredentials(endpoint string, userName string, password string) (*WebDAVClient, error) {
+	return newWebDAVClient(endpoint, userName, password, "")
 }
