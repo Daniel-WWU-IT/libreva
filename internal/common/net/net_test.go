@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-package net
+package net_test
 
 import (
 	"fmt"
@@ -34,19 +34,21 @@ import (
 
 	"github.com/Daniel-WWU-IT/libreva/internal/common"
 	"github.com/Daniel-WWU-IT/libreva/internal/common/crypto"
+	"github.com/Daniel-WWU-IT/libreva/internal/common/net"
+	testintl "github.com/Daniel-WWU-IT/libreva/internal/testing"
 )
 
 func TestCheckRPCStatus(t *testing.T) {
 	status := rpc.Status{
 		Code: rpc.Code_CODE_OK,
 	}
-	if err := CheckRPCStatus("ok-check", &status); err != nil {
-		t.Errorf(common.FormatTestError("CheckRPCStatus", err, "ok-check", status))
+	if err := net.CheckRPCStatus("ok-check", &status); err != nil {
+		t.Errorf(testintl.FormatTestError("CheckRPCStatus", err, "ok-check", status))
 	}
 
 	status.Code = rpc.Code_CODE_PERMISSION_DENIED
-	if err := CheckRPCStatus("fail-check", &status); err == nil {
-		t.Errorf(common.FormatTestError("CheckRPCStatus", fmt.Errorf("accepted an invalid RPC status"), "fail-check", status))
+	if err := net.CheckRPCStatus("fail-check", &status); err == nil {
+		t.Errorf(testintl.FormatTestError("CheckRPCStatus", fmt.Errorf("accepted an invalid RPC status"), "fail-check", status))
 	}
 }
 
@@ -61,18 +63,18 @@ func TestTUSClient(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.endpoint, func(t *testing.T) {
-			if client, err := NewTUSClient(test.endpoint, "", ""); err == nil {
+			if client, err := net.NewTUSClient(test.endpoint, "", ""); err == nil {
 				data := strings.NewReader("This is a simple TUS test")
 				dataDesc := common.CreateDataDescriptor("tus-test.txt", data.Size())
 				checksumTypeName := crypto.GetChecksumTypeName(provider.ResourceChecksumType_RESOURCE_CHECKSUM_TYPE_MD5)
 
 				if err := client.Write(data, dataDesc.Name(), &dataDesc, checksumTypeName, ""); err != nil && test.shouldSucceed {
-					t.Errorf(common.FormatTestError("TUSClient.Write", err, data, dataDesc.Name(), &dataDesc, checksumTypeName, ""))
+					t.Errorf(testintl.FormatTestError("TUSClient.Write", err, data, dataDesc.Name(), &dataDesc, checksumTypeName, ""))
 				} else if err == nil && !test.shouldSucceed {
-					t.Errorf(common.FormatTestError("TUSClient.Write", fmt.Errorf("writing to a non-TUS host succeeded"), data, dataDesc.Name(), &dataDesc, checksumTypeName, ""))
+					t.Errorf(testintl.FormatTestError("TUSClient.Write", fmt.Errorf("writing to a non-TUS host succeeded"), data, dataDesc.Name(), &dataDesc, checksumTypeName, ""))
 				}
 			} else {
-				t.Errorf(common.FormatTestError("NewTUSClient", err, test.endpoint, "", ""))
+				t.Errorf(testintl.FormatTestError("NewTUSClient", err, test.endpoint, "", ""))
 			}
 		})
 	}
@@ -89,25 +91,25 @@ func TestWebDAVClient(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.endpoint, func(t *testing.T) {
-			if client, err := NewWebDAVClient(test.endpoint, "testUser", "test12345"); err == nil {
+			if client, err := net.NewWebDAVClient(test.endpoint, "testUser", "test12345"); err == nil {
 				const fileName = "webdav-test.txt"
 
 				data := strings.NewReader("This is a simple WebDAV test")
 				if err := client.Write(fileName, data, data.Size()); err == nil && test.shouldSucceed {
 					if _, err := client.Read(fileName); err != nil {
-						t.Errorf(common.FormatTestError("WebDAVClient.Read", err))
+						t.Errorf(testintl.FormatTestError("WebDAVClient.Read", err))
 					}
 
 					if err := client.Remove(fileName); err != nil {
-						t.Errorf(common.FormatTestError("WebDAVClient.Remove", err))
+						t.Errorf(testintl.FormatTestError("WebDAVClient.Remove", err))
 					}
 				} else if err != nil && test.shouldSucceed {
-					t.Errorf(common.FormatTestError("WebDAVClient.Write", err, fileName, data, data.Size()))
+					t.Errorf(testintl.FormatTestError("WebDAVClient.Write", err, fileName, data, data.Size()))
 				} else if err == nil && !test.shouldSucceed {
-					t.Errorf(common.FormatTestError("WebDAVClient.Write", fmt.Errorf("writing to a non-WebDAV host succeeded"), fileName, data, data.Size()))
+					t.Errorf(testintl.FormatTestError("WebDAVClient.Write", fmt.Errorf("writing to a non-WebDAV host succeeded"), fileName, data, data.Size()))
 				}
 			} else {
-				t.Errorf(common.FormatTestError("NewWebDavClient", err, test.endpoint, "testUser", "test12345"))
+				t.Errorf(testintl.FormatTestError("NewWebDavClient", err, test.endpoint, "testUser", "test12345"))
 			}
 		})
 	}

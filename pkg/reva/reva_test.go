@@ -22,13 +22,14 @@
  * SOFTWARE.
  */
 
-package reva
+package reva_test
 
 import (
 	"fmt"
 	"testing"
 
-	"github.com/Daniel-WWU-IT/libreva/internal/common"
+	testintl "github.com/Daniel-WWU-IT/libreva/internal/testing"
+	"github.com/Daniel-WWU-IT/libreva/pkg/reva"
 )
 
 func TestSession(t *testing.T) {
@@ -46,35 +47,35 @@ func TestSession(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.host, func(t *testing.T) {
-			if session, err := NewSession(); err == nil {
+			if session, err := reva.NewSession(); err == nil {
 				if err := session.Initiate(test.host, false); err == nil {
 					if _, err := session.GetLoginMethods(); err != nil && test.shouldList {
-						t.Errorf(common.FormatTestError("Session.GetLoginMethods", err))
+						t.Errorf(testintl.FormatTestError("Session.GetLoginMethods", err))
 					} else if err == nil && !test.shouldList {
-						t.Errorf(common.FormatTestError("Session.GetLoginMethods", fmt.Errorf("listing of login methods with an invalid host succeeded")))
+						t.Errorf(testintl.FormatTestError("Session.GetLoginMethods", fmt.Errorf("listing of login methods with an invalid host succeeded")))
 					}
 
 					if err := session.BasicLogin(test.username, test.password); err == nil && test.shouldLogin {
 						if !session.IsValid() {
-							t.Errorf(common.FormatTestError("Session.BasicLogin", fmt.Errorf("logged in, but session is invalid"), test.username, test.password))
+							t.Errorf(testintl.FormatTestError("Session.BasicLogin", fmt.Errorf("logged in, but session is invalid"), test.username, test.password))
 						}
 						if session.Token() == "" {
-							t.Errorf(common.FormatTestError("Session.BasicLogin", fmt.Errorf("logged in, but received no token"), test.username, test.password))
+							t.Errorf(testintl.FormatTestError("Session.BasicLogin", fmt.Errorf("logged in, but received no token"), test.username, test.password))
 						}
 					} else if err != nil && test.shouldLogin {
-						t.Errorf(common.FormatTestError("Session.BasicLogin", err, test.username, test.password))
+						t.Errorf(testintl.FormatTestError("Session.BasicLogin", err, test.username, test.password))
 					} else if err == nil && !test.shouldLogin {
-						t.Errorf(common.FormatTestError("Session.BasicLogin", fmt.Errorf("logging in with invalid credentials succeeded"), test.username, test.password))
+						t.Errorf(testintl.FormatTestError("Session.BasicLogin", fmt.Errorf("logging in with invalid credentials succeeded"), test.username, test.password))
 					} else {
 						if session.IsValid() {
-							t.Errorf(common.FormatTestError("Session.BasicLogin", fmt.Errorf("not logged in, but session is valid"), test.username, test.password))
+							t.Errorf(testintl.FormatTestError("Session.BasicLogin", fmt.Errorf("not logged in, but session is valid"), test.username, test.password))
 						}
 					}
 				} else {
-					t.Errorf(common.FormatTestError("Session.Initiate", err, test.host, false))
+					t.Errorf(testintl.FormatTestError("Session.Initiate", err, test.host, false))
 				}
 			} else {
-				t.Errorf(common.FormatTestError("NewSession", err))
+				t.Errorf(testintl.FormatTestError("NewSession", err))
 			}
 		})
 	}
@@ -91,31 +92,25 @@ func TestHTTPRequest(t *testing.T) {
 	}
 
 	// Prepare the session
-	session := MustNewSession()
-	if err := session.Initiate("sciencemesh-test.uni-muenster.de:9600", false); err != nil {
-		t.Errorf(common.FormatTestError("Session.Initiate", err, "sciencemesh-test.uni-muenster.de:9600", false))
-		return
-	}
-	if err := session.BasicLogin("test", "testpass"); err != nil {
-		t.Errorf(common.FormatTestError("Session.BasicLogin", err, "test", "testpass"))
-		return
-	}
-
-	for _, test := range tests {
-		t.Run(test.url, func(t *testing.T) {
-			if request, err := session.NewHTTPRequest(test.url, "GET", "", nil); err == nil {
-				if status, _, err := request.Do(); err == nil && test.shouldSucceed {
-					if status != test.wants {
-						t.Errorf(common.FormatTestResult("HTTPRequest.Do", test.wants, status))
+	if session, err := testintl.CreateTestSession(); err == nil {
+		for _, test := range tests {
+			t.Run(test.url, func(t *testing.T) {
+				if request, err := session.NewHTTPRequest(test.url, "GET", "", nil); err == nil {
+					if status, _, err := request.Do(); err == nil && test.shouldSucceed {
+						if status != test.wants {
+							t.Errorf(testintl.FormatTestResult("HTTPRequest.Do", test.wants, status))
+						}
+					} else if err != nil && test.shouldSucceed {
+						t.Errorf(testintl.FormatTestError("HTTPRequest.Do", err))
+					} else if err == nil && !test.shouldSucceed {
+						t.Errorf(testintl.FormatTestError("HTTPRequest.Do", fmt.Errorf("send request to an invalid host succeeded")))
 					}
-				} else if err != nil && test.shouldSucceed {
-					t.Errorf(common.FormatTestError("HTTPRequest.Do", err))
-				} else if err == nil && !test.shouldSucceed {
-					t.Errorf(common.FormatTestError("HTTPRequest.Do", fmt.Errorf("send request to an invalid host succeeded")))
+				} else {
+					t.Errorf(testintl.FormatTestError("Session.NewHTTPRequest", err, test.url, "GET", "", nil))
 				}
-			} else {
-				t.Errorf(common.FormatTestError("Session.NewHTTPRequest", err, test.url, "GET", "", nil))
-			}
-		})
+			})
+		}
+	} else {
+		t.Errorf(testintl.FormatTestError("CreateTestSession", err))
 	}
 }

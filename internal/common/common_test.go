@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-package common
+package common_test
 
 import (
 	"fmt"
@@ -30,32 +30,35 @@ import (
 	"time"
 
 	types "github.com/cs3org/go-cs3apis/cs3/types/v1beta1"
+
+	"github.com/Daniel-WWU-IT/libreva/internal/common"
+	testintl "github.com/Daniel-WWU-IT/libreva/internal/testing"
 )
 
 func TestDataDescriptor(t *testing.T) {
 	const name = "DATA_DESC"
 	const size = 42
 
-	dataDesc := CreateDataDescriptor(name, size)
+	dataDesc := common.CreateDataDescriptor(name, size)
 	now := time.Now().Round(time.Millisecond)
 	if v := dataDesc.Name(); v != name {
-		t.Errorf(FormatTestResult("DataDescriptor.Name", name, v))
+		t.Errorf(testintl.FormatTestResult("DataDescriptor.Name", name, v))
 	}
 	if v := dataDesc.Size(); v != size {
-		t.Errorf(FormatTestResult("DataDescriptor.Size", size, v))
+		t.Errorf(testintl.FormatTestResult("DataDescriptor.Size", size, v))
 	}
 	if v := dataDesc.Mode(); v != 0700 {
-		t.Errorf(FormatTestResult("DataDescriptor.Mode", 0700, v))
+		t.Errorf(testintl.FormatTestResult("DataDescriptor.Mode", 0700, v))
 	}
 	if v := dataDesc.IsDir(); v != false {
-		t.Errorf(FormatTestResult("DataDescriptor.IsDir", false, v))
+		t.Errorf(testintl.FormatTestResult("DataDescriptor.IsDir", false, v))
 	}
 	if v := dataDesc.ModTime(); !v.Round(time.Millisecond).Equal(now) {
 		// Since there's always a slight chance that the rounded times won't match, just log this mismatch
-		t.Logf(FormatTestResult("DataDescriptor.ModTime", now, v))
+		t.Logf(testintl.FormatTestResult("DataDescriptor.ModTime", now, v))
 	}
 	if v := dataDesc.Sys(); v != nil {
-		t.Errorf(FormatTestResult("DataDescriptor.Sys", nil, v))
+		t.Errorf(testintl.FormatTestResult("DataDescriptor.Sys", nil, v))
 	}
 }
 
@@ -75,9 +78,9 @@ func TestFindString(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		found := FindString(test.input, test.needle)
+		found := common.FindString(test.input, test.needle)
 		if found != test.wants {
-			t.Errorf(FormatTestResult("FindString", test.wants, found, test.input, test.needle))
+			t.Errorf(testintl.FormatTestResult("FindString", test.wants, found, test.input, test.needle))
 		}
 	}
 }
@@ -98,9 +101,9 @@ func TestFindStringNoCase(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		found := FindStringNoCase(test.input, test.needle)
+		found := common.FindStringNoCase(test.input, test.needle)
 		if found != test.wants {
-			t.Errorf(FormatTestResult("FindString", test.wants, found, test.input, test.needle))
+			t.Errorf(testintl.FormatTestResult("FindString", test.wants, found, test.input, test.needle))
 		}
 	}
 }
@@ -129,17 +132,17 @@ func TestDecodeOpaqueMap(t *testing.T) {
 		{"somekey", "", false},
 	}
 
-	decodedMap := DecodeOpaqueMap(&opaque)
+	decodedMap := common.DecodeOpaqueMap(&opaque)
 	for _, test := range tests {
 		value, ok := decodedMap[test.key]
 		if ok == test.shouldSucceed {
 			if ok {
 				if value != test.wants {
-					t.Errorf(FormatTestResult("DecodeOpaqueMap", test.wants, value, opaque))
+					t.Errorf(testintl.FormatTestResult("DecodeOpaqueMap", test.wants, value, opaque))
 				}
 			}
 		} else {
-			t.Errorf(FormatTestResult("DecodeOpaqueMap", test.shouldSucceed, ok, opaque))
+			t.Errorf(testintl.FormatTestResult("DecodeOpaqueMap", test.shouldSucceed, ok, opaque))
 		}
 	}
 }
@@ -175,11 +178,11 @@ func TestGetValuesFromOpaque(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		_, err := GetValuesFromOpaque(&opaque, test.keys, test.mandatory)
+		_, err := common.GetValuesFromOpaque(&opaque, test.keys, test.mandatory)
 		if err != nil && test.shouldSucceed {
-			t.Errorf(FormatTestError("GetValuesFromOpaque", err, opaque, test.keys, test.mandatory))
+			t.Errorf(testintl.FormatTestError("GetValuesFromOpaque", err, opaque, test.keys, test.mandatory))
 		} else if err == nil && !test.shouldSucceed {
-			t.Errorf(FormatTestError("GetValuesFromOpaque", fmt.Errorf("getting values from an invalid opaque succeeded"), opaque, test.keys, test.mandatory))
+			t.Errorf(testintl.FormatTestError("GetValuesFromOpaque", fmt.Errorf("getting values from an invalid opaque succeeded"), opaque, test.keys, test.mandatory))
 		}
 	}
 }

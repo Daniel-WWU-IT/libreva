@@ -22,31 +22,4 @@
  * SOFTWARE.
  */
 
-package common
-
-import (
-	"fmt"
-	"strings"
-)
-
-func formatTestMessage(funcName string, msg string, params ...interface{}) string {
-	// Format parameter list
-	paramList := make([]string, 0, len(params))
-	for _, param := range params {
-		paramList = append(paramList, fmt.Sprintf("%#v", param))
-	}
-
-	return fmt.Sprintf("%s(%s) -> %s", funcName, strings.Join(paramList, ", "), msg)
-}
-
-// FormatTestResult formats a function call along with its parameters, result and expected result.
-func FormatTestResult(funcName string, wants interface{}, got interface{}, params ...interface{}) string {
-	msg := fmt.Sprintf("Got: %#v; Wants: %#v", got, wants)
-	return formatTestMessage(funcName, msg, params...)
-}
-
-// FormatTestError formats a function error.
-func FormatTestError(funcName string, err error, params ...interface{}) string {
-	msg := fmt.Sprintf("Error: %v", err)
-	return formatTestMessage(funcName, msg, params...)
-}
+package action_test

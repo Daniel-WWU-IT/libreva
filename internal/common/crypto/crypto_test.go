@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-package crypto
+package crypto_test
 
 import (
 	"fmt"
@@ -31,7 +31,8 @@ import (
 
 	provider "github.com/cs3org/go-cs3apis/cs3/storage/provider/v1beta1"
 
-	"github.com/Daniel-WWU-IT/libreva/internal/common"
+	"github.com/Daniel-WWU-IT/libreva/internal/common/crypto"
+	testintl "github.com/Daniel-WWU-IT/libreva/internal/testing"
 )
 
 func TestComputeChecksum(t *testing.T) {
@@ -48,19 +49,19 @@ func TestComputeChecksum(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			if checksum, err := ComputeChecksum(test.checksumType, strings.NewReader(test.input)); err == nil {
+			if checksum, err := crypto.ComputeChecksum(test.checksumType, strings.NewReader(test.input)); err == nil {
 				if checksum != test.wants {
-					t.Errorf(common.FormatTestResult("ComputeChecksum", test.wants, checksum, test.checksumType, test.input))
+					t.Errorf(testintl.FormatTestResult("ComputeChecksum", test.wants, checksum, test.checksumType, test.input))
 				}
 			} else {
-				t.Errorf(common.FormatTestError("ComputeChecksum", err))
+				t.Errorf(testintl.FormatTestError("ComputeChecksum", err))
 			}
 		})
 	}
 
 	// Check how ComputeChecksum reacts to an invalid checksum type
-	if _, err := ComputeChecksum(provider.ResourceChecksumType_RESOURCE_CHECKSUM_TYPE_INVALID, nil); err == nil {
-		t.Errorf(common.FormatTestError("ComputeChecksum", fmt.Errorf("accepted an invalid checksum type w/o erring"), provider.ResourceChecksumType_RESOURCE_CHECKSUM_TYPE_INVALID, nil))
+	if _, err := crypto.ComputeChecksum(provider.ResourceChecksumType_RESOURCE_CHECKSUM_TYPE_INVALID, nil); err == nil {
+		t.Errorf(testintl.FormatTestError("ComputeChecksum", fmt.Errorf("accepted an invalid checksum type w/o erring"), provider.ResourceChecksumType_RESOURCE_CHECKSUM_TYPE_INVALID, nil))
 	}
 }
 
@@ -74,8 +75,8 @@ func TestGetChecksumTypeName(t *testing.T) {
 	}
 
 	for input, wants := range tests {
-		if got := GetChecksumTypeName(input); got != wants {
-			t.Errorf(common.FormatTestResult("GetChecksumTypeName", wants, got, input))
+		if got := crypto.GetChecksumTypeName(input); got != wants {
+			t.Errorf(testintl.FormatTestResult("GetChecksumTypeName", wants, got, input))
 		}
 	}
 }
