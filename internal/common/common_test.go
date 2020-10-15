@@ -25,6 +25,7 @@
 package common
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -139,6 +140,46 @@ func TestDecodeOpaqueMap(t *testing.T) {
 			}
 		} else {
 			t.Errorf(FormatTestResult("DecodeOpaqueMap", test.shouldSucceed, ok, opaque))
+		}
+	}
+}
+
+func TestGetValuesFromOpaque(t *testing.T) {
+	opaque := types.Opaque{
+		Map: map[string]*types.OpaqueEntry{
+			"magic": {
+				Decoder: "plain",
+				Value:   []byte("42"),
+			},
+			"stuff": {
+				Decoder: "plain",
+				Value:   []byte("Some stuff"),
+			},
+			"json": {
+				Decoder: "json",
+				Value:   []byte("[]"),
+			},
+		},
+	}
+
+	tests := []struct {
+		keys          []string
+		mandatory     bool
+		shouldSucceed bool
+	}{
+		{[]string{"magic", "stuff"}, true, true},
+		{[]string{"magic", "stuff", "json"}, false, true},
+		{[]string{"magic", "stuff", "json"}, true, false},
+		{[]string{"notfound"}, false, true},
+		{[]string{"notfound"}, true, false},
+	}
+
+	for _, test := range tests {
+		_, err := GetValuesFromOpaque(&opaque, test.keys, test.mandatory)
+		if err != nil && test.shouldSucceed {
+			t.Errorf(FormatTestError("GetValuesFromOpaque", err, opaque, test.keys, test.mandatory))
+		} else if err == nil && !test.shouldSucceed {
+			t.Errorf(FormatTestError("GetValuesFromOpaque", fmt.Errorf("getting values from an invalid opaque succeeded"), opaque, test.keys, test.mandatory))
 		}
 	}
 }

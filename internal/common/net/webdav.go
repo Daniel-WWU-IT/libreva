@@ -24,6 +24,7 @@ import (
 	"io/ioutil"
 	"strconv"
 
+	types "github.com/cs3org/go-cs3apis/cs3/types/v1beta1"
 	"github.com/studio-b12/gowebdav"
 
 	"github.com/Daniel-WWU-IT/libreva/internal/common"
@@ -38,27 +39,21 @@ const (
 type WebDAVClient struct {
 	client *gowebdav.Client
 
-	token    string
 	filePath string
 }
 
-func (webdav *WebDAVClient) initClient(endpoint string, values map[string]string) error {
-	// Extract all necessary information from the Opaque object
-	if token, ok := values[WebDAVTokenName]; ok {
-		webdav.token = token
-	} else {
-		return fmt.Errorf("missing WebDAV token")
+func (webdav *WebDAVClient) initClient(endpoint string, filePath string, userName string, password string, accessToken string) error {
+	if filePath == "" {
+		return fmt.Errorf("no file path specified")
 	}
-
-	if file, ok := values[WebDAVPathName]; ok {
-		webdav.filePath = file
-	} else {
-		return fmt.Errorf("missing WebDAV file path")
-	}
+	webdav.filePath = filePath
 
 	// Create the WebDAV client
-	webdav.client = gowebdav.NewClient(endpoint, "", "")
-	webdav.client.SetHeader(common.AccessTokenName, webdav.token)
+	webdav.client = gowebdav.NewClient(endpoint, userName, password)
+
+	if accessToken != "" {
+		webdav.client.SetHeader(common.AccessTokenName, accessToken)
+	}
 
 	return nil
 }
@@ -91,16 +86,29 @@ func (webdav *WebDAVClient) Write(data io.Reader, size int64) error {
 	return nil
 }
 
-// IsSupported checks whether the endpoint supports WebDAV.
-func (webdav *WebDAVClient) IsSupported() bool {
-	return webdav.client != nil
-}
-
-// NewWebDAVClient creates a new WebDAV client.
-func NewWebDAVClient(endpoint string, values map[string]string) (*WebDAVClient, error) {
+func newWebDAVClient(endpoint string, filePath string, userName string, password string, accessToken string) (*WebDAVClient, error) {
 	client := &WebDAVClient{}
-	if err := client.initClient(endpoint, values); err != nil {
+	if err := client.initClient(endpoint, filePath, userName, password, accessToken); err != nil {
 		return nil, fmt.Errorf("unable to create the WebDAV client: %v", err)
 	}
 	return client, nil
+}
+
+// NewWebDAVClient creates a new WebDAV client using an access token.
+func NewWebDAVClient(endpoint string, filePath string, accessToken string) (*WebDAVClient, error) {
+	return newWebDAVClient(endpoint, filePath, "", "", accessToken)
+}
+
+// NewWebDAVClientWithOpaque creates a new WebDAV client using the information stored in the opaque.
+func NewWebDAVClientWithOpaque(endpoint string, opaque *types.Opaque) (*WebDAVClient, error) {
+	if values, err := common.GetValuesFromOpaque(opaque, []string{WebDAVTokenName, WebDAVPathName}, true); err == nil {
+		return NewWebDAVClient(endpoint, values[WebDAVPathName], values[WebDAVTokenName])
+	} else {
+		return nil, fmt.Errorf("invalid opaque object: %v", err)
+	}
+}
+
+// NewWebDAVClientWithCredentials creates a new WebDAV client with user credentials.
+func NewWebDAVClientWithCredentials(endpoint string, filePath string, userName string, password string) (*WebDAVClient, error) {
+	return newWebDAVClient(endpoint, filePath, userName, password, "")
 }

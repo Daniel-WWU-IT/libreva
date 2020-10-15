@@ -81,7 +81,7 @@ func (action *UploadAction) upload(data io.Reader, dataInfo os.FileInfo, target 
 	// Issue a file upload request to Reva; this will provide the endpoint to write the file data to
 	if upload, err := action.initiateUpload(target, dataInfo.Size()); err == nil {
 		// Try to upload the file via WebDAV first
-		if client, err := net.NewWebDAVClient(upload.UploadEndpoint, common.DecodeOpaqueMap(upload.Opaque)); err == nil {
+		if client, err := net.NewWebDAVClientWithOpaque(upload.UploadEndpoint, upload.Opaque); err == nil {
 			if err := client.Write(data, dataInfo.Size()); err != nil {
 				return nil, fmt.Errorf("error while writing to '%v' via WebDAV: %v", upload.UploadEndpoint, err)
 			}

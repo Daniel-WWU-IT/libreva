@@ -24,7 +24,11 @@
 
 package common
 
-import types "github.com/cs3org/go-cs3apis/cs3/types/v1beta1"
+import (
+	"fmt"
+
+	types "github.com/cs3org/go-cs3apis/cs3/types/v1beta1"
+)
 
 // DecodeOpaqueMap decodes a Reva Opaque into a map of strings.
 func DecodeOpaqueMap(opaque *types.Opaque) map[string]string {
@@ -41,4 +45,22 @@ func DecodeOpaqueMap(opaque *types.Opaque) map[string]string {
 	}
 
 	return entries
+}
+
+// GetValuesFromOpaque extracts the given values from the Opaque.
+func GetValuesFromOpaque(opaque *types.Opaque, keys []string, mandatory bool) (map[string]string, error) {
+	values := make(map[string]string)
+	entries := DecodeOpaqueMap(opaque)
+
+	for _, key := range keys {
+		if value, ok := entries[key]; ok {
+			values[key] = value
+		} else {
+			if mandatory {
+				return map[string]string{}, fmt.Errorf("missing opaque entry '%v'", key)
+			}
+		}
+	}
+
+	return values, nil
 }
