@@ -25,9 +25,10 @@
 package common
 
 import (
-	"os"
 	"testing"
 	"time"
+
+	types "github.com/cs3org/go-cs3apis/cs3/types/v1beta1"
 )
 
 func TestDataDescriptor(t *testing.T) {
@@ -42,8 +43,8 @@ func TestDataDescriptor(t *testing.T) {
 	if v := dataDesc.Size(); v != size {
 		t.Errorf(FormatTestResult("DataDescriptor.Size", size, v))
 	}
-	if v := dataDesc.Mode(); v != os.ModePerm {
-		t.Errorf(FormatTestResult("DataDescriptor.Mode", os.ModePerm, v))
+	if v := dataDesc.Mode(); v != 0700 {
+		t.Errorf(FormatTestResult("DataDescriptor.Mode", 0700, v))
 	}
 	if v := dataDesc.IsDir(); v != false {
 		t.Errorf(FormatTestResult("DataDescriptor.IsDir", false, v))
@@ -99,6 +100,45 @@ func TestFindStringNoCase(t *testing.T) {
 		found := FindStringNoCase(test.input, test.needle)
 		if found != test.wants {
 			t.Errorf(FormatTestResult("FindString", test.wants, found, test.input, test.needle))
+		}
+	}
+}
+
+func TestDecodeOpaqueMap(t *testing.T) {
+	opaque := types.Opaque{
+		Map: map[string]*types.OpaqueEntry{
+			"magic": {
+				Decoder: "plain",
+				Value:   []byte("42"),
+			},
+			"json": {
+				Decoder: "json",
+				Value:   []byte("[]"),
+			},
+		},
+	}
+
+	tests := []struct {
+		key           string
+		wants         string
+		shouldSucceed bool
+	}{
+		{"magic", "42", true},
+		{"json", "[]", false},
+		{"somekey", "", false},
+	}
+
+	decodedMap := DecodeOpaqueMap(&opaque)
+	for _, test := range tests {
+		value, ok := decodedMap[test.key]
+		if ok == test.shouldSucceed {
+			if ok {
+				if value != test.wants {
+					t.Errorf(FormatTestResult("DecodeOpaqueMap", test.wants, value, opaque))
+				}
+			}
+		} else {
+			t.Errorf(FormatTestResult("DecodeOpaqueMap", test.shouldSucceed, ok, opaque))
 		}
 	}
 }

@@ -31,6 +31,7 @@ import (
 	provider "github.com/cs3org/go-cs3apis/cs3/storage/provider/v1beta1"
 	storage "github.com/cs3org/go-cs3apis/cs3/storage/provider/v1beta1"
 
+	"github.com/Daniel-WWU-IT/libreva/internal/common"
 	"github.com/Daniel-WWU-IT/libreva/internal/common/net"
 	"github.com/Daniel-WWU-IT/libreva/pkg/reva"
 )
@@ -60,7 +61,7 @@ func (action *DownloadAction) Download(fileInfo *storage.ResourceInfo) ([]byte, 
 	// Issue a file download request to Reva; this will provide the endpoint to read the file data from
 	if download, err := action.initiateDownload(fileInfo); err == nil {
 		// Try to get the file via WebDAV first
-		if client, err := net.NewWebDAVClient(download.DownloadEndpoint, download.Opaque); err == nil {
+		if client, err := net.NewWebDAVClient(download.DownloadEndpoint, common.DecodeOpaqueMap(download.Opaque)); err == nil {
 			if data, err := client.Read(); err == nil {
 				return data, nil
 			} else {

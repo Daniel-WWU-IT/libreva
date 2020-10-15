@@ -38,7 +38,7 @@ func (ddesc *DataDescriptor) Size() int64 {
 }
 
 func (ddesc *DataDescriptor) Mode() os.FileMode {
-	return os.ModePerm
+	return 0700
 }
 
 func (ddesc *DataDescriptor) ModTime() time.Time {
