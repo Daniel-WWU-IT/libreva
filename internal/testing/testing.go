@@ -53,11 +53,11 @@ func FormatTestError(funcName string, err error, params ...interface{}) string {
 	return formatTestMessage(funcName, msg, params...)
 }
 
-// CreateTestSession creates the Reva session for testing
-func CreateTestSession() (*reva.Session, error) {
+// CreateTestSession creates the Reva session for testing.
+func CreateTestSession(host string, username string, password string) (*reva.Session, error) {
 	if session, err := reva.NewSession(); err == nil {
-		if err := session.Initiate("sciencemesh-test.uni-muenster.de:9600", false); err == nil {
-			if err := session.BasicLogin("test", "testpass"); err == nil {
+		if err := session.Initiate(host, false); err == nil {
+			if err := session.BasicLogin(username, password); err == nil {
 				return session, nil
 			}
 		}

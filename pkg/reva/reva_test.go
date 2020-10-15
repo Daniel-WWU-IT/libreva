@@ -92,7 +92,7 @@ func TestHTTPRequest(t *testing.T) {
 	}
 
 	// Prepare the session
-	if session, err := testintl.CreateTestSession(); err == nil {
+	if session, err := testintl.CreateTestSession("sciencemesh-test.uni-muenster.de:9600", "test", "testpass"); err == nil {
 		for _, test := range tests {
 			t.Run(test.url, func(t *testing.T) {
 				if request, err := session.NewHTTPRequest(test.url, "GET", "", nil); err == nil {
