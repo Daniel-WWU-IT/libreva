@@ -159,13 +159,13 @@ func (action *UploadAction) selectChecksumType(checksumTypes []*provider.Resourc
 }
 
 func (action *UploadAction) uploadFilePUT(upload *gateway.InitiateFileUploadResponse, data io.Reader, checksum string, checksumType string) error {
-	if request, err := action.session.NewWriteRequest(upload.UploadEndpoint, upload.Token, data); err == nil {
+	if request, err := action.session.NewHTTPRequest(upload.UploadEndpoint, "PUT", upload.Token, data); err == nil {
 		request.AddParameters(map[string]string{
 			"xs":      checksum,
 			"xs_type": checksumType,
 		})
 
-		_, err := request.Do()
+		_, _, err := request.Do()
 		return err
 	} else {
 		return fmt.Errorf("unable to create HTTP request for '%v': %v", upload.UploadEndpoint, err)

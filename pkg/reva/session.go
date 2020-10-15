@@ -59,10 +59,6 @@ func (session *Session) initSession(ctx context.Context) error {
 
 // Initiate begins the actual session by creating a connection to the host and preparing the gateway client.
 func (session *Session) Initiate(host string, insecure bool) error {
-	if host == "" {
-		return fmt.Errorf("no host provided")
-	}
-
 	// We first need to get a gRPC connection to the host
 	if conn, err := session.getConnection(host, insecure); err == nil {
 		// Create the gateway client
@@ -143,14 +139,9 @@ func (session *Session) BasicLogin(username string, password string) error {
 	}
 }
 
-// NewReadRequest returns an HTTP read request helper instance.
-func (session *Session) NewReadRequest(endpoint string, transportToken string) (*httpRequest, error) {
-	return newHTTPRequest(session, endpoint, "GET", transportToken, nil)
-}
-
-// NewWriteRequest returns an HTTP write request helper instance.
-func (session *Session) NewWriteRequest(endpoint string, transportToken string, data io.Reader) (*httpRequest, error) {
-	return newHTTPRequest(session, endpoint, "PUT", transportToken, data)
+// NewHTTPRequest returns an HTTP request helper instance.
+func (session *Session) NewHTTPRequest(endpoint string, method string, transportToken string, data io.Reader) (*httpRequest, error) {
+	return newHTTPRequest(session, endpoint, method, transportToken, data)
 }
 
 // Client gets the gateway client instance.

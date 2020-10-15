@@ -80,17 +80,17 @@ func (request *httpRequest) AddParameters(params map[string]string) {
 }
 
 // Do performs the request on the HTTP endpoint and returns the body data.
-func (request *httpRequest) Do() ([]byte, error) {
+func (request *httpRequest) Do() (int, []byte, error) {
 	if httpRes, err := request.do(); err == nil {
 		defer httpRes.Body.Close()
 
 		if data, err := ioutil.ReadAll(httpRes.Body); err == nil {
-			return data, nil
+			return httpRes.StatusCode, data, nil
 		} else {
-			return nil, fmt.Errorf("reading response data from '%v' failed: %v", request.endpoint, err)
+			return 0, nil, fmt.Errorf("reading response data from '%v' failed: %v", request.endpoint, err)
 		}
 	} else {
-		return nil, fmt.Errorf("unable to perform the HTTP request for '%v': %v", request.endpoint, err)
+		return 0, nil, fmt.Errorf("unable to perform the HTTP request for '%v': %v", request.endpoint, err)
 	}
 }
 
