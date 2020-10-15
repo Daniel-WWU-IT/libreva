@@ -77,15 +77,13 @@ func (client *TUSClient) checkEndpointCreationOption(endpoint string) bool {
 	// Perform an OPTIONS request to the endpoint; if this succeeds, check if the header "Tus-Extension"
 	// contains the "creation" flag
 	httpClient := &http.Client{
-		Timeout: time.Duration(1 * time.Second),
+		Timeout: time.Duration(1.5 * float64(time.Second)),
 	}
 
 	if httpReq, err := http.NewRequest("OPTIONS", endpoint, nil); err == nil {
-		if res, err := httpClient.Do(httpReq); err == nil {
-			if res.StatusCode == http.StatusOK {
-				ext := strings.Split(res.Header.Get("Tus-Extension"), ",")
-				return common.FindStringNoCase(ext, "creation") != -1
-			}
+		if res, err := httpClient.Do(httpReq); err == nil && res.StatusCode == http.StatusOK {
+			ext := strings.Split(res.Header.Get("Tus-Extension"), ",")
+			return common.FindStringNoCase(ext, "creation") != -1
 		}
 	}
 

@@ -51,15 +51,30 @@ func TestCheckRPCStatus(t *testing.T) {
 }
 
 func TestTUSClient(t *testing.T) {
-	if client, err := NewTUSClient("https://tusd.tusdemo.net/files/", "", ""); err == nil {
-		data := strings.NewReader("This is a simple TUS test to the tus.io public tusd server")
-		dataDesc := common.CreateDataDescriptor("tus-test.txt", data.Size())
-		checksumTypeName := crypto.GetChecksumTypeName(provider.ResourceChecksumType_RESOURCE_CHECKSUM_TYPE_MD5)
+	tests := []struct {
+		endpoint      string
+		shouldSucceed bool
+	}{
+		{"https://tusd.tusdemo.net/files/", true},
+		{"https://google.de", false},
+	}
 
-		if err := client.Write(data, "tus-test.txt", &dataDesc, checksumTypeName, ""); err != nil {
-			t.Errorf(common.FormatTestError("TUSClient.Write", err, data, "tus-test.txt", &dataDesc, checksumTypeName, ""))
-		}
-	} else {
-		t.Errorf(common.FormatTestError("NewTUSClient", err, "http://tusd.tusdemo.net/files/", "", ""))
+	for _, test := range tests {
+		t.Run(test.endpoint, func(t *testing.T) {
+			if client, err := NewTUSClient(test.endpoint, "", ""); err == nil {
+				data := strings.NewReader("This is a simple TUS test")
+				dataDesc := common.CreateDataDescriptor("tus-test.txt", data.Size())
+				checksumTypeName := crypto.GetChecksumTypeName(provider.ResourceChecksumType_RESOURCE_CHECKSUM_TYPE_MD5)
+
+				err := client.Write(data, dataDesc.Name(), &dataDesc, checksumTypeName, "")
+				if err != nil && test.shouldSucceed {
+					t.Errorf(common.FormatTestError("TUSClient.Write", err, data, dataDesc.Name(), &dataDesc, checksumTypeName, ""))
+				} else if err == nil && !test.shouldSucceed {
+					t.Errorf(common.FormatTestError("TUSClient.Write", fmt.Errorf("writing to a non-TUS host succeeded"), data, dataDesc.Name(), &dataDesc, checksumTypeName, ""))
+				}
+			} else {
+				t.Errorf(common.FormatTestError("NewTUSClient", err, test.endpoint, "", ""))
+			}
+		})
 	}
 }
