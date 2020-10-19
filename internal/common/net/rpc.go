@@ -35,6 +35,7 @@ type rpcStatusGetter interface {
 }
 
 // CheckRPCInvocation checks if an RPC invocation has succeeded.
+// For this, the error from the original call is first checked; after that, the actual RPC response status is checked.
 func CheckRPCInvocation(operation string, res rpcStatusGetter, callErr error) error {
 	if callErr != nil {
 		return fmt.Errorf("%s: %v", operation, callErr)

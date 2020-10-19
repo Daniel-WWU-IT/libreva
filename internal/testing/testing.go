@@ -41,19 +41,20 @@ func formatTestMessage(funcName string, msg string, params ...interface{}) strin
 	return fmt.Sprintf("%s(%s) -> %s", funcName, strings.Join(paramList, ", "), msg)
 }
 
-// FormatTestResult formats a function call along with its parameters, result and expected result.
+// FormatTestResult pretty-formats a function call along with its parameters, result and expected result.
 func FormatTestResult(funcName string, wants interface{}, got interface{}, params ...interface{}) string {
 	msg := fmt.Sprintf("Got: %#v; Wants: %#v", got, wants)
 	return formatTestMessage(funcName, msg, params...)
 }
 
-// FormatTestError formats a function error.
+// FormatTestError pretty-formats a function error.
 func FormatTestError(funcName string, err error, params ...interface{}) string {
 	msg := fmt.Sprintf("Error: %v", err)
 	return formatTestMessage(funcName, msg, params...)
 }
 
-// CreateTestSession creates the Reva session for testing.
+// CreateTestSession creates a Reva session for testing.
+// For this, it performs a basic login using the specified credentials.
 func CreateTestSession(host string, username string, password string) (*reva.Session, error) {
 	if session, err := reva.NewSession(); err == nil {
 		if err := session.Initiate(host, false); err == nil {

@@ -33,7 +33,7 @@ import (
 	"github.com/Daniel-WWU-IT/libreva/internal/common"
 )
 
-// TUSClient is a simple client for uploading files via TUS.
+// TUSClient is a simple client wrapper for uploading files via TUS.
 type TUSClient struct {
 	config *tus.Config
 	client *tus.Client
@@ -89,7 +89,8 @@ func (client *TUSClient) checkEndpointCreationOption(endpoint string) bool {
 	return false
 }
 
-// Write writes data from a stream to the endpoint.
+// Write writes the provided data to the endpoint.
+// The target is used as the filename on the remote site. The file information and checksum are used to create a fingerprint.
 func (client *TUSClient) Write(data io.Reader, target string, fileInfo os.FileInfo, checksumType string, checksum string) error {
 	metadata := map[string]string{
 		"filename": path.Base(target),

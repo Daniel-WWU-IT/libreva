@@ -35,7 +35,7 @@ const (
 	WebDAVPathName  = "webdav-file-path"
 )
 
-// WebDAVClient is a simple client for down- and uploading files via WebDAV.
+// WebDAVClient is a simple client wrapper for down- and uploading files via WebDAV.
 type WebDAVClient struct {
 	client *gowebdav.Client
 }
@@ -51,7 +51,7 @@ func (webdav *WebDAVClient) initClient(endpoint string, userName string, passwor
 	return nil
 }
 
-// Read reads all data from the endpoint.
+// Read reads all data of the specified remote file.
 func (webdav *WebDAVClient) Read(file string) ([]byte, error) {
 	reader, err := webdav.client.ReadStream(file)
 	if err != nil {
@@ -66,7 +66,7 @@ func (webdav *WebDAVClient) Read(file string) ([]byte, error) {
 	return data, nil
 }
 
-// Write writes data from a stream to the endpoint.
+// Write writes data to the specified remote file.
 func (webdav *WebDAVClient) Write(file string, data io.Reader, size int64) error {
 	webdav.client.SetHeader("Upload-Length", strconv.FormatInt(size, 10))
 

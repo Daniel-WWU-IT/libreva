@@ -25,7 +25,10 @@
 package net
 
 const (
-	AccessTokenIndex   = 0
-	AccessTokenName    = "x-access-token"
+	// AccessTokenIndex specifies the index of the Reva access token in a context.
+	AccessTokenIndex = 0
+	// AccessTokenName specifies the name of the Reva access token used during requests.
+	AccessTokenName = "x-access-token"
+	// TransportTokenName specifies the name of the Reva transport token used during data transfers.
 	TransportTokenName = "X-Reva-Transfer"
 )

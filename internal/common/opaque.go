@@ -30,7 +30,8 @@ import (
 	types "github.com/cs3org/go-cs3apis/cs3/types/v1beta1"
 )
 
-// DecodeOpaqueMap decodes a Reva Opaque into a map of strings.
+// DecodeOpaqueMap decodes a Reva opaque object into a map of strings.
+// Only plain decoders are currently supported.
 func DecodeOpaqueMap(opaque *types.Opaque) map[string]string {
 	entries := make(map[string]string)
 
@@ -47,7 +48,8 @@ func DecodeOpaqueMap(opaque *types.Opaque) map[string]string {
 	return entries
 }
 
-// GetValuesFromOpaque extracts the given values from the Opaque.
+// GetValuesFromOpaque extracts the given keys from the opaque object.
+// If mandatory is set to true, all specified keys must be available in the opaque object.
 func GetValuesFromOpaque(opaque *types.Opaque, keys []string, mandatory bool) (map[string]string, error) {
 	values := make(map[string]string)
 	entries := DecodeOpaqueMap(opaque)
