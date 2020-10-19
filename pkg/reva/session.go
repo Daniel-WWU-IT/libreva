@@ -41,6 +41,7 @@ import (
 )
 
 // Session stores information about a Reva session.
+// It is also responsible for managing the Reva gateway client.
 type Session struct {
 	ctx    context.Context
 	client gateway.GatewayAPIClient
@@ -54,7 +55,7 @@ func (session *Session) initSession(ctx context.Context) error {
 	return nil
 }
 
-// Initiate begins the actual session by creating a connection to the host and preparing the gateway client.
+// Initiate initiates the session by creating a connection to the host and preparing the gateway client.
 func (session *Session) Initiate(host string, insecure bool) error {
 	conn, err := session.getConnection(host, insecure)
 	if err != nil {
@@ -115,6 +116,7 @@ func (session *Session) Login(method string, username string, password string) e
 }
 
 // BasicLogin tries to log into Reva using basic authentication.
+// Before the actual login attempt, the method verifies that the Reva instance does support the "basic" login method.
 func (session *Session) BasicLogin(username string, password string) error {
 	// Check if the 'basic' method is actually supported by the Reva instance; only continue if this is the case
 	supportedMethods, err := session.GetLoginMethods()
@@ -129,7 +131,7 @@ func (session *Session) BasicLogin(username string, password string) error {
 	return session.Login("basic", username, password)
 }
 
-// NewHTTPRequest returns an HTTP request helper instance.
+// NewHTTPRequest returns an HTTP request instance.
 func (session *Session) NewHTTPRequest(endpoint string, method string, transportToken string, data io.Reader) (*httpRequest, error) {
 	return newHTTPRequest(session, endpoint, method, transportToken, data)
 }
@@ -139,12 +141,12 @@ func (session *Session) Client() gateway.GatewayAPIClient {
 	return session.client
 }
 
-// Token gets the session token.
+// Context returns the session context.
 func (session *Session) Context() context.Context {
 	return session.ctx
 }
 
-// Token returns the current session token.
+// Token returns the session token.
 func (session *Session) Token() string {
 	return session.token
 }

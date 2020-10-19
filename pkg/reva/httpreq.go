@@ -70,7 +70,8 @@ func (request *httpRequest) do() (*http.Response, error) {
 	return httpRes, nil
 }
 
-// AddParameters adds the specified parameters to the resulting query.
+// AddParameters adds the specified parameters to the request.
+// The parameters are passed in the query URL.
 func (request *httpRequest) AddParameters(params map[string]string) {
 	query := request.request.URL.Query()
 	for k, v := range params {
@@ -80,6 +81,7 @@ func (request *httpRequest) AddParameters(params map[string]string) {
 }
 
 // Do performs the request on the HTTP endpoint and returns the body data.
+// If checkStatus is set to true, the call will only succeed if the server returns a status code of 200.
 func (request *httpRequest) Do(checkStatus bool) ([]byte, error) {
 	httpRes, err := request.do()
 	if err != nil {
