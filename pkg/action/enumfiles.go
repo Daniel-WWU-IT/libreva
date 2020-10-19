@@ -33,7 +33,7 @@ import (
 	"github.com/Daniel-WWU-IT/libreva/pkg/reva"
 )
 
-// EnumFilesAction offers functions to enumerate files and directories of a container.
+// EnumFilesAction offers functions to enumerate files and directories.
 type EnumFilesAction struct {
 	action
 }

@@ -36,11 +36,13 @@ import (
 )
 
 // DownloadAction is used to download files through Reva.
+// WebDAV will be used automatically if the endpoint supports it.
 type DownloadAction struct {
 	action
 }
 
-// DownloadFile retrieves data of the provided file path; in case of an error, nil is returned.
+// DownloadFile retrieves the data of the provided file path.
+// The method first tries to retrieve information about the remote file by performing a "stat" on it.
 func (action *DownloadAction) DownloadFile(path string) ([]byte, error) {
 	// Get the ResourceInfo object of the specified path
 	fileInfoAct := MustNewFileOperationsAction(action.session)
@@ -52,7 +54,7 @@ func (action *DownloadAction) DownloadFile(path string) ([]byte, error) {
 	return action.Download(info)
 }
 
-// Download retrieves data of the provided file; in case of an error, nil is returned.
+// Download retrieves the data of the provided resource.
 func (action *DownloadAction) Download(fileInfo *storage.ResourceInfo) ([]byte, error) {
 	if fileInfo.Type != storage.ResourceType_RESOURCE_TYPE_FILE {
 		return nil, fmt.Errorf("resource is not a file")

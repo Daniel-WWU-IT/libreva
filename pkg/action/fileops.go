@@ -41,7 +41,7 @@ type FileOperationsAction struct {
 	action
 }
 
-// Stat queries the file information for the specified remote file.
+// Stat queries the file information of the specified remote file.
 func (action *FileOperationsAction) Stat(path string) (*storage.ResourceInfo, error) {
 	ref := &provider.Reference{
 		Spec: &provider.Reference_Path{Path: path},
@@ -54,7 +54,7 @@ func (action *FileOperationsAction) Stat(path string) (*storage.ResourceInfo, er
 	return res.Info, nil
 }
 
-// FileExists checks whether the specified exists.
+// FileExists checks whether the specified file exists.
 func (action *FileOperationsAction) FileExists(path string) bool {
 	// Stat the file and see if that succeeds; if so, check if the resource is indeed a file
 	info, err := action.Stat(path)
@@ -81,7 +81,7 @@ func (action *FileOperationsAction) ResourceExists(path string) bool {
 	return err == nil
 }
 
-// MakePath creates all directories specified by the path.
+// MakePath creates all missing directories in the specified path.
 func (action *FileOperationsAction) MakePath(path string) error {
 	path = strings.TrimPrefix(path, "/")
 
@@ -136,7 +136,7 @@ func (action *FileOperationsAction) MoveTo(source string, path string) error {
 	return action.Move(source, path)
 }
 
-// Remove removes the specified path.
+// Remove removes the specified resource.
 func (action *FileOperationsAction) Remove(path string) error {
 	ref := &provider.Reference{
 		Spec: &provider.Reference_Path{Path: path},

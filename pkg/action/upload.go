@@ -39,13 +39,14 @@ import (
 )
 
 // UploadAction is used to upload files through Reva.
+// WebDAV will be used automatically if the endpoint supports it. The EnableTUS flag specifies whether to use TUS if WebDAV is not supported.
 type UploadAction struct {
 	action
 
 	EnableTUS bool
 }
 
-// UploadFile uploads the provided file to the target; in case of an error, nil is returned.
+// UploadFile uploads the provided file to the target.
 func (action *UploadAction) UploadFile(file *os.File, target string) (*storage.ResourceInfo, error) {
 	fileInfo, err := file.Stat()
 	if err != nil {
@@ -55,17 +56,17 @@ func (action *UploadAction) UploadFile(file *os.File, target string) (*storage.R
 	return action.upload(file, fileInfo, target)
 }
 
-// UploadFileTo uploads the provided file to the target directory, keeping the original file name; in case of an error, nil is returned.
+// UploadFileTo uploads the provided file to the target directory, keeping the original file name.
 func (action *UploadAction) UploadFileTo(file *os.File, path string) (*storage.ResourceInfo, error) {
 	return action.UploadFile(file, p.Join(path, p.Base(file.Name())))
 }
 
-// UploadBytes uploads the provided byte data to the target; in case of an error, nil is returned.
+// UploadBytes uploads the provided byte data to the target.
 func (action *UploadAction) UploadBytes(data []byte, target string) (*storage.ResourceInfo, error) {
 	return action.Upload(bytes.NewReader(data), int64(len(data)), target)
 }
 
-// Upload uploads data from the provided data reader to the target; in case of an error, nil is returned.
+// Upload uploads data from the provided reader to the target.
 func (action *UploadAction) Upload(data io.Reader, size int64, target string) (*storage.ResourceInfo, error) {
 	dataDesc := common.CreateDataDescriptor(p.Base(target), size)
 	return action.upload(data, &dataDesc, target)
