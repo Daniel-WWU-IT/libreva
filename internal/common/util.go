@@ -35,6 +35,7 @@ func FindString(a []string, x string) int {
 			return i
 		}
 	}
+
 	return -1
 }
 
@@ -45,5 +46,6 @@ func FindStringNoCase(a []string, x string) int {
 			return i
 		}
 	}
+
 	return -1
 }

@@ -35,7 +35,7 @@ type action struct {
 }
 
 func (act *action) initAction(session *reva.Session) error {
-	if session == nil || !session.IsValid() {
+	if !session.IsValid() {
 		return fmt.Errorf("no valid session provided")
 	}
 	act.session = session

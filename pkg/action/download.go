@@ -44,11 +44,12 @@ type DownloadAction struct {
 func (action *DownloadAction) DownloadFile(path string) ([]byte, error) {
 	// Get the ResourceInfo object of the specified path
 	fileInfoAct := MustNewFileOperationsAction(action.session)
-	if info, err := fileInfoAct.Stat(path); err == nil {
-		return action.Download(info)
-	} else {
+	info, err := fileInfoAct.Stat(path)
+	if err != nil {
 		return nil, fmt.Errorf("the path '%v' was not found: %v", path, err)
 	}
+
+	return action.Download(info)
 }
 
 // Download retrieves data of the provided file; in case of an error, nil is returned.
@@ -58,28 +59,30 @@ func (action *DownloadAction) Download(fileInfo *storage.ResourceInfo) ([]byte, 
 	}
 
 	// Issue a file download request to Reva; this will provide the endpoint to read the file data from
-	if download, err := action.initiateDownload(fileInfo); err == nil {
-		// Try to get the file via WebDAV first
-		if client, values, err := net.NewWebDAVClientWithOpaque(download.DownloadEndpoint, download.Opaque); err == nil {
-			if data, err := client.Read(values[net.WebDAVPathName]); err == nil {
-				return data, nil
-			} else {
-				return nil, fmt.Errorf("error while reading from '%v' via WebDAV: %v", download.DownloadEndpoint, err)
-			}
-		} else {
-			// WebDAV is not supported, so directly read the HTTP endpoint
-			if request, err := action.session.NewHTTPRequest(download.DownloadEndpoint, "GET", download.Token, nil); err == nil {
-				if _, data, err := request.Do(); err == nil {
-					return data, nil
-				} else {
-					return nil, fmt.Errorf("error while reading from '%v' via HTTP: %v", download.DownloadEndpoint, err)
-				}
-			} else {
-				return nil, fmt.Errorf("unable to create an HTTP request for '%v': %v", download.DownloadEndpoint, err)
-			}
-		}
-	} else {
+	download, err := action.initiateDownload(fileInfo)
+	if err != nil {
 		return nil, err
+	}
+
+	// Try to get the file via WebDAV first
+	if client, values, err := net.NewWebDAVClientWithOpaque(download.DownloadEndpoint, download.Opaque); err == nil {
+		data, err := client.Read(values[net.WebDAVPathName])
+		if err != nil {
+			return nil, fmt.Errorf("error while reading from '%v' via WebDAV: %v", download.DownloadEndpoint, err)
+		}
+		return data, nil
+	} else {
+		// WebDAV is not supported, so directly read the HTTP endpoint
+		request, err := action.session.NewHTTPRequest(download.DownloadEndpoint, "GET", download.Token, nil)
+		if err != nil {
+			return nil, fmt.Errorf("unable to create an HTTP request for '%v': %v", download.DownloadEndpoint, err)
+		}
+
+		data, err := request.Do(true)
+		if err != nil {
+			return nil, fmt.Errorf("error while reading from '%v' via HTTP: %v", download.DownloadEndpoint, err)
+		}
+		return data, nil
 	}
 }
 
@@ -92,16 +95,11 @@ func (action *DownloadAction) initiateDownload(fileInfo *storage.ResourceInfo) (
 			},
 		},
 	}
-
-	if res, err := action.session.Client().InitiateFileDownload(action.session.Context(), req); err == nil {
-		if err := net.CheckRPCStatus("initiating download", res.Status); err != nil {
-			return nil, err
-		}
-
-		return res, nil
-	} else {
-		return nil, fmt.Errorf("unable to initiate download on '%v': %v", fileInfo.Path, err)
+	res, err := action.session.Client().InitiateFileDownload(action.session.Context(), req)
+	if err := net.CheckRPCInvocation("initiating download", res, err); err != nil {
+		return nil, err
 	}
+	return res, nil
 }
 
 // NewDownloadAction creates a new download action.
@@ -115,9 +113,9 @@ func NewDownloadAction(session *reva.Session) (*DownloadAction, error) {
 
 // MustNewDownloadAction creates a new download action and panics on failure.
 func MustNewDownloadAction(session *reva.Session) *DownloadAction {
-	if action, err := NewDownloadAction(session); err == nil {
-		return action
-	} else {
+	action, err := NewDownloadAction(session)
+	if err != nil {
 		panic(err)
 	}
+	return action
 }

@@ -25,7 +25,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Daniel-WWU-IT/libreva/internal/common"
+	"github.com/Daniel-WWU-IT/libreva/internal/common/net"
 )
 
 type httpRequest struct {
@@ -46,28 +46,28 @@ func (request *httpRequest) initRequest(session *Session, endpoint string, metho
 	}
 
 	// Initialize the HTTP request
-	if httpReq, err := http.NewRequestWithContext(session.Context(), method, endpoint, data); err == nil {
-		request.request = httpReq
-
-		// Set mandatory header values
-		request.request.Header.Set(common.AccessTokenName, session.Token())
-		request.request.Header.Set(common.TransportTokenName, transportToken)
-
-		return nil
-	} else {
-		return err
+	httpReq, err := http.NewRequestWithContext(session.Context(), method, endpoint, data)
+	if err != nil {
+		return fmt.Errorf("unable to create the HTTP request: %v", err)
 	}
+	request.request = httpReq
+
+	// Set mandatory header values
+	request.request.Header.Set(net.AccessTokenName, session.Token())
+	request.request.Header.Set(net.TransportTokenName, transportToken)
+
+	return nil
 }
 
 func (request *httpRequest) do() (*http.Response, error) {
-	if httpRes, err := request.client.Do(request.request); err == nil {
-		if httpRes.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("performing the HTTP request failed: %v", httpRes.Status)
-		}
-		return httpRes, nil
-	} else {
-		return nil, err
+	httpRes, err := request.client.Do(request.request)
+	if err != nil {
+		return nil, fmt.Errorf("unable to do the HTTP request: %v", err)
 	}
+	if httpRes.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("performing the HTTP request failed: %v", httpRes.Status)
+	}
+	return httpRes, nil
 }
 
 // AddParameters adds the specified parameters to the resulting query.
@@ -80,18 +80,22 @@ func (request *httpRequest) AddParameters(params map[string]string) {
 }
 
 // Do performs the request on the HTTP endpoint and returns the body data.
-func (request *httpRequest) Do() (int, []byte, error) {
-	if httpRes, err := request.do(); err == nil {
-		defer httpRes.Body.Close()
-
-		if data, err := ioutil.ReadAll(httpRes.Body); err == nil {
-			return httpRes.StatusCode, data, nil
-		} else {
-			return 0, nil, fmt.Errorf("reading response data from '%v' failed: %v", request.endpoint, err)
-		}
-	} else {
-		return 0, nil, fmt.Errorf("unable to perform the HTTP request for '%v': %v", request.endpoint, err)
+func (request *httpRequest) Do(checkStatus bool) ([]byte, error) {
+	httpRes, err := request.do()
+	if err != nil {
+		return nil, fmt.Errorf("unable to perform the HTTP request for '%v': %v", request.endpoint, err)
 	}
+	defer httpRes.Body.Close()
+
+	if checkStatus && httpRes.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("received invalid response from '%v': %s", request.endpoint, httpRes.Status)
+	}
+
+	data, err := ioutil.ReadAll(httpRes.Body)
+	if err != nil {
+		return nil, fmt.Errorf("reading response data from '%v' failed: %v", request.endpoint, err)
+	}
+	return data, nil
 }
 
 func newHTTPRequest(session *Session, endpoint string, method string, transportToken string, data io.Reader) (*httpRequest, error) {

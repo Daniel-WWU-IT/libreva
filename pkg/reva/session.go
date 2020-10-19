@@ -49,9 +49,6 @@ type Session struct {
 }
 
 func (session *Session) initSession(ctx context.Context) error {
-	if ctx == nil {
-		return fmt.Errorf("no context provided")
-	}
 	session.ctx = ctx
 
 	return nil
@@ -59,14 +56,13 @@ func (session *Session) initSession(ctx context.Context) error {
 
 // Initiate begins the actual session by creating a connection to the host and preparing the gateway client.
 func (session *Session) Initiate(host string, insecure bool) error {
-	// We first need to get a gRPC connection to the host
-	if conn, err := session.getConnection(host, insecure); err == nil {
-		// Create the gateway client
-		session.client = gateway.NewGatewayAPIClient(conn)
-		return nil
-	} else {
+	conn, err := session.getConnection(host, insecure)
+	if err != nil {
 		return fmt.Errorf("unable to establish a gRPC connection to '%v': %v", host, err)
 	}
+	session.client = gateway.NewGatewayAPIClient(conn)
+
+	return nil
 }
 
 func (session *Session) getConnection(host string, insecure bool) (*grpc.ClientConn, error) {
@@ -82,19 +78,16 @@ func (session *Session) getConnection(host string, insecure bool) (*grpc.ClientC
 // GetLoginMethods returns a list of all available login methods supported by the Reva instance.
 func (session *Session) GetLoginMethods() ([]string, error) {
 	req := &registry.ListAuthProvidersRequest{}
-	if res, err := session.client.ListAuthProviders(session.ctx, req); err == nil {
-		if err := net.CheckRPCStatus("listing authorization providers", res.Status); err != nil {
-			return []string{}, err
-		}
-
-		methods := make([]string, 0, len(res.Types))
-		for _, method := range res.Types {
-			methods = append(methods, method)
-		}
-		return methods, nil
-	} else {
+	res, err := session.client.ListAuthProviders(session.ctx, req)
+	if err := net.CheckRPCInvocation("listing authorization providers", res, err); err != nil {
 		return []string{}, err
 	}
+
+	methods := make([]string, 0, len(res.Types))
+	for _, method := range res.Types {
+		methods = append(methods, method)
+	}
+	return methods, nil
 }
 
 // Login logs into Reva using the specified method and user credentials.
@@ -104,39 +97,36 @@ func (session *Session) Login(method string, username string, password string) e
 		ClientId:     username,
 		ClientSecret: password,
 	}
-
-	if res, err := session.client.Authenticate(session.ctx, req); err == nil {
-		if err := net.CheckRPCStatus("authenticating", res.Status); err != nil {
-			return err
-		}
-
-		if res.Token == "" {
-			return fmt.Errorf("invalid token received: %q", res.Token)
-		}
-		session.token = res.Token
-
-		// Now that we have a valid token, we can append this to our context
-		session.ctx = context.WithValue(session.ctx, common.AccessTokenIndex, session.token)
-		session.ctx = metadata.AppendToOutgoingContext(session.ctx, common.AccessTokenName, session.token)
-
-		return nil
-	} else {
+	res, err := session.client.Authenticate(session.ctx, req)
+	if err := net.CheckRPCInvocation("authenticating", res, err); err != nil {
 		return err
 	}
+
+	if res.Token == "" {
+		return fmt.Errorf("invalid token received: %q", res.Token)
+	}
+	session.token = res.Token
+
+	// Now that we have a valid token, we can append this to our context
+	session.ctx = context.WithValue(session.ctx, net.AccessTokenIndex, session.token)
+	session.ctx = metadata.AppendToOutgoingContext(session.ctx, net.AccessTokenName, session.token)
+
+	return nil
 }
 
 // BasicLogin tries to log into Reva using basic authentication.
 func (session *Session) BasicLogin(username string, password string) error {
 	// Check if the 'basic' method is actually supported by the Reva instance; only continue if this is the case
-	if supportedMethods, err := session.GetLoginMethods(); err == nil {
-		if common.FindStringNoCase(supportedMethods, "basic") == -1 {
-			return fmt.Errorf("'basic' login method is not supported")
-		}
-
-		return session.Login("basic", username, password)
-	} else {
+	supportedMethods, err := session.GetLoginMethods()
+	if err != nil {
 		return fmt.Errorf("unable to get a list of all supported login methods: %v", err)
 	}
+
+	if common.FindStringNoCase(supportedMethods, "basic") == -1 {
+		return fmt.Errorf("'basic' login method is not supported")
+	}
+
+	return session.Login("basic", username, password)
 }
 
 // NewHTTPRequest returns an HTTP request helper instance.
@@ -170,7 +160,6 @@ func NewSessionWithContext(ctx context.Context) (*Session, error) {
 	if err := session.initSession(ctx); err != nil {
 		return nil, fmt.Errorf("unable to initialize the session: %v", err)
 	}
-
 	return session, nil
 }
 
@@ -181,9 +170,9 @@ func NewSession() (*Session, error) {
 
 // MustNewSession creates a new session and panics on failure.
 func MustNewSession() *Session {
-	if session, err := NewSession(); err == nil {
-		return session
-	} else {
+	session, err := NewSession()
+	if err != nil {
 		panic(err)
 	}
+	return session
 }

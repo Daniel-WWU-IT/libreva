@@ -47,36 +47,31 @@ func (action *FileOperationsAction) Stat(path string) (*storage.ResourceInfo, er
 		Spec: &provider.Reference_Path{Path: path},
 	}
 	req := &provider.StatRequest{Ref: ref}
-
-	if res, err := action.session.Client().Stat(action.session.Context(), req); err == nil {
-		if err := net.CheckRPCStatus("querying resource information", res.Status); err != nil {
-			return nil, err
-		}
-
-		return res.Info, nil
-	} else {
-		return nil, fmt.Errorf("unable to query information for '%v': %v", path, err)
+	res, err := action.session.Client().Stat(action.session.Context(), req)
+	if err := net.CheckRPCInvocation("querying resource information", res, err); err != nil {
+		return nil, err
 	}
+	return res.Info, nil
 }
 
 // FileExists checks whether the specified exists.
 func (action *FileOperationsAction) FileExists(path string) bool {
 	// Stat the file and see if that succeeds; if so, check if the resource is indeed a file
-	if info, err := action.Stat(path); err == nil {
-		return info.Type == provider.ResourceType_RESOURCE_TYPE_FILE
-	} else {
+	info, err := action.Stat(path)
+	if err != nil {
 		return false
 	}
+	return info.Type == provider.ResourceType_RESOURCE_TYPE_FILE
 }
 
 // DirExists checks whether the specified directory exists.
 func (action *FileOperationsAction) DirExists(path string) bool {
 	// Stat the file and see if that succeeds; if so, check if the resource is indeed a directory
-	if info, err := action.Stat(path); err == nil {
-		return info.Type == provider.ResourceType_RESOURCE_TYPE_CONTAINER
-	} else {
+	info, err := action.Stat(path)
+	if err != nil {
 		return false
 	}
+	return info.Type == provider.ResourceType_RESOURCE_TYPE_CONTAINER
 }
 
 // ResourceExists checks whether the specified resource exists (w/o checking for its actual type).
@@ -100,13 +95,9 @@ func (action *FileOperationsAction) MakePath(path string) error {
 				Spec: &provider.Reference_Path{Path: curPath},
 			}
 			req := &provider.CreateContainerRequest{Ref: ref}
-
-			if res, err := action.session.Client().CreateContainer(action.session.Context(), req); err == nil {
-				if err := net.CheckRPCStatus("creating container", res.Status); err != nil {
-					return err
-				}
-			} else {
-				return fmt.Errorf("unable to create container '%v': %v", curPath, err)
+			res, err := action.session.Client().CreateContainer(action.session.Context(), req)
+			if err := net.CheckRPCInvocation("creating container", res, err); err != nil {
+				return err
 			}
 		} else { // The path exists, so make sure that is actually a directory
 			if fileInfo.Type != provider.ResourceType_RESOURCE_TYPE_CONTAINER {
@@ -127,16 +118,12 @@ func (action *FileOperationsAction) Move(source string, target string) error {
 		Spec: &provider.Reference_Path{Path: target},
 	}
 	req := &provider.MoveRequest{Source: sourceRef, Destination: targetRef}
-
-	if res, err := action.session.Client().Move(action.session.Context(), req); err == nil {
-		if err := net.CheckRPCStatus("moving resource", res.Status); err != nil {
-			return err
-		}
-
-		return nil
-	} else {
-		return fmt.Errorf("unable to move '%v' to '%v': %v", source, target, err)
+	res, err := action.session.Client().Move(action.session.Context(), req)
+	if err := net.CheckRPCInvocation("moving resource", res, err); err != nil {
+		return err
 	}
+
+	return nil
 }
 
 // MoveTo moves the specified source to the target directory, creating it if necessary.
@@ -155,16 +142,12 @@ func (action *FileOperationsAction) Remove(path string) error {
 		Spec: &provider.Reference_Path{Path: path},
 	}
 	req := &provider.DeleteRequest{Ref: ref}
-
-	if res, err := action.session.Client().Delete(action.session.Context(), req); err == nil {
-		if err := net.CheckRPCStatus("deleting resource", res.Status); err != nil {
-			return err
-		}
-
-		return nil
-	} else {
-		return fmt.Errorf("unable to delete '%v': %v", path, err)
+	res, err := action.session.Client().Delete(action.session.Context(), req)
+	if err := net.CheckRPCInvocation("deleting resource", res, err); err != nil {
+		return err
 	}
+
+	return nil
 }
 
 // NewFileOperationsAction creates a new file operations action.
@@ -178,9 +161,9 @@ func NewFileOperationsAction(session *reva.Session) (*FileOperationsAction, erro
 
 // MustNewFileOperationsAction creates a new file operations action and panics on failure.
 func MustNewFileOperationsAction(session *reva.Session) *FileOperationsAction {
-	if action, err := NewFileOperationsAction(session); err == nil {
-		return action
-	} else {
+	action, err := NewFileOperationsAction(session)
+	if err != nil {
 		panic(err)
 	}
+	return action
 }

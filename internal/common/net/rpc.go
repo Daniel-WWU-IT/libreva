@@ -30,7 +30,22 @@ import (
 	rpc "github.com/cs3org/go-cs3apis/cs3/rpc/v1beta1"
 )
 
-func CheckRPCStatus(operation string, status *rpc.Status) error {
+type rpcStatusGetter interface {
+	GetStatus() *rpc.Status
+}
+
+// CheckRPCInvocation checks if an RPC invocation has succeeded.
+func CheckRPCInvocation(operation string, res rpcStatusGetter, callErr error) error {
+	if callErr != nil {
+		return fmt.Errorf("%s: %v", operation, callErr)
+	}
+
+	return CheckRPCStatus(operation, res)
+}
+
+// CheckRPCStatus checks the returned status of an RPC call.
+func CheckRPCStatus(operation string, res rpcStatusGetter) error {
+	status := res.GetStatus()
 	if status.Code != rpc.Code_CODE_OK {
 		return fmt.Errorf("%s: %q (code=%+v, trace=%q)", operation, status.Message, status.Code, status.Trace)
 	} else {

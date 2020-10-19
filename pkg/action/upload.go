@@ -47,11 +47,12 @@ type UploadAction struct {
 
 // UploadFile uploads the provided file to the target; in case of an error, nil is returned.
 func (action *UploadAction) UploadFile(file *os.File, target string) (*storage.ResourceInfo, error) {
-	if fileInfo, err := file.Stat(); err == nil {
-		return action.upload(file, fileInfo, target)
-	} else {
+	fileInfo, err := file.Stat()
+	if err != nil {
 		return nil, fmt.Errorf("unable to stat the specified file: %v", err)
 	}
+
+	return action.upload(file, fileInfo, target)
 }
 
 // UploadFileTo uploads the provided file to the target directory, keeping the original file name; in case of an error, nil is returned.
@@ -79,38 +80,39 @@ func (action *UploadAction) upload(data io.Reader, dataInfo os.FileInfo, target 
 	}
 
 	// Issue a file upload request to Reva; this will provide the endpoint to write the file data to
-	if upload, err := action.initiateUpload(target, dataInfo.Size()); err == nil {
-		// Try to upload the file via WebDAV first
-		if client, values, err := net.NewWebDAVClientWithOpaque(upload.UploadEndpoint, upload.Opaque); err == nil {
-			if err := client.Write(values[net.WebDAVPathName], data, dataInfo.Size()); err != nil {
-				return nil, fmt.Errorf("error while writing to '%v' via WebDAV: %v", upload.UploadEndpoint, err)
-			}
-		} else {
-			// WebDAV is not supported, so directly write to the HTTP endpoint
-			checksumType := action.selectChecksumType(upload.AvailableChecksums)
-			checksumTypeName := crypto.GetChecksumTypeName(checksumType)
-			checksum, err := crypto.ComputeChecksum(checksumType, data)
-			if err != nil {
-				return nil, fmt.Errorf("unable to compute data checksum: %v", err)
-			}
+	upload, err := action.initiateUpload(target, dataInfo.Size())
+	if err != nil {
+		return nil, err
+	}
 
-			// Check if the data object can be seeked; if so, reset it to its beginning
-			if seeker, ok := data.(io.Seeker); ok {
-				_, _ = seeker.Seek(0, 0)
-			}
-
-			if action.EnableTUS {
-				if err := action.uploadFileTUS(upload, target, data, dataInfo, checksum, checksumTypeName); err != nil {
-					return nil, fmt.Errorf("error while writing to '%v' via TUS: %v", upload.UploadEndpoint, err)
-				}
-			} else {
-				if err := action.uploadFilePUT(upload, data, checksum, checksumTypeName); err != nil {
-					return nil, fmt.Errorf("error while writing to '%v' via HTTP: %v", upload.UploadEndpoint, err)
-				}
-			}
+	// Try to upload the file via WebDAV first
+	if client, values, err := net.NewWebDAVClientWithOpaque(upload.UploadEndpoint, upload.Opaque); err == nil {
+		if err := client.Write(values[net.WebDAVPathName], data, dataInfo.Size()); err != nil {
+			return nil, fmt.Errorf("error while writing to '%v' via WebDAV: %v", upload.UploadEndpoint, err)
 		}
 	} else {
-		return nil, err
+		// WebDAV is not supported, so directly write to the HTTP endpoint
+		checksumType := action.selectChecksumType(upload.AvailableChecksums)
+		checksumTypeName := crypto.GetChecksumTypeName(checksumType)
+		checksum, err := crypto.ComputeChecksum(checksumType, data)
+		if err != nil {
+			return nil, fmt.Errorf("unable to compute data checksum: %v", err)
+		}
+
+		// Check if the data object can be seeked; if so, reset it to its beginning
+		if seeker, ok := data.(io.Seeker); ok {
+			_, _ = seeker.Seek(0, 0)
+		}
+
+		if action.EnableTUS {
+			if err := action.uploadFileTUS(upload, target, data, dataInfo, checksum, checksumTypeName); err != nil {
+				return nil, fmt.Errorf("error while writing to '%v' via TUS: %v", upload.UploadEndpoint, err)
+			}
+		} else {
+			if err := action.uploadFilePUT(upload, data, checksum, checksumTypeName); err != nil {
+				return nil, fmt.Errorf("error while writing to '%v' via HTTP: %v", upload.UploadEndpoint, err)
+			}
+		}
 	}
 
 	// Return information about the just-uploaded file
@@ -134,16 +136,12 @@ func (action *UploadAction) initiateUpload(target string, size int64) (*gateway.
 			},
 		},
 	}
-
-	if res, err := action.session.Client().InitiateFileUpload(action.session.Context(), req); err == nil {
-		if err := net.CheckRPCStatus("initiating upload", res.Status); err != nil {
-			return nil, err
-		}
-
-		return res, nil
-	} else {
-		return nil, fmt.Errorf("unable to initiate upload to '%v': %v", target, err)
+	res, err := action.session.Client().InitiateFileUpload(action.session.Context(), req)
+	if err := net.CheckRPCInvocation("initiating upload", res, err); err != nil {
+		return nil, err
 	}
+
+	return res, nil
 }
 
 func (action *UploadAction) selectChecksumType(checksumTypes []*provider.ResourceChecksumPriority) provider.ResourceChecksumType {
@@ -159,25 +157,26 @@ func (action *UploadAction) selectChecksumType(checksumTypes []*provider.Resourc
 }
 
 func (action *UploadAction) uploadFilePUT(upload *gateway.InitiateFileUploadResponse, data io.Reader, checksum string, checksumType string) error {
-	if request, err := action.session.NewHTTPRequest(upload.UploadEndpoint, "PUT", upload.Token, data); err == nil {
-		request.AddParameters(map[string]string{
-			"xs":      checksum,
-			"xs_type": checksumType,
-		})
-
-		_, _, err := request.Do()
-		return err
-	} else {
+	request, err := action.session.NewHTTPRequest(upload.UploadEndpoint, "PUT", upload.Token, data)
+	if err != nil {
 		return fmt.Errorf("unable to create HTTP request for '%v': %v", upload.UploadEndpoint, err)
 	}
+
+	request.AddParameters(map[string]string{
+		"xs":      checksum,
+		"xs_type": checksumType,
+	})
+
+	_, err = request.Do(true)
+	return err
 }
 
 func (action *UploadAction) uploadFileTUS(upload *gateway.InitiateFileUploadResponse, target string, data io.Reader, fileInfo os.FileInfo, checksum string, checksumType string) error {
-	if tusClient, err := net.NewTUSClient(upload.UploadEndpoint, action.session.Token(), upload.Token); err == nil {
-		return tusClient.Write(data, target, fileInfo, checksumType, checksum)
-	} else {
+	tusClient, err := net.NewTUSClient(upload.UploadEndpoint, action.session.Token(), upload.Token)
+	if err != nil {
 		return fmt.Errorf("unable to create TUS client: %v", err)
 	}
+	return tusClient.Write(data, target, fileInfo, checksumType, checksum)
 }
 
 // NewUploadAction creates a new upload action.
@@ -191,9 +190,9 @@ func NewUploadAction(session *reva.Session) (*UploadAction, error) {
 
 // MustNewUploadAction creates a new upload action and panics on failure.
 func MustNewUploadAction(session *reva.Session) *UploadAction {
-	if action, err := NewUploadAction(session); err == nil {
-		return action
-	} else {
+	action, err := NewUploadAction(session)
+	if err != nil {
 		panic(err)
 	}
+	return action
 }

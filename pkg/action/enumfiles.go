@@ -44,57 +44,52 @@ func (action *EnumFilesAction) ListAll(path string, includeSubdirectories bool) 
 		Spec: &storage.Reference_Path{Path: path},
 	}
 	req := &storage.ListContainerRequest{Ref: ref}
-
-	if res, err := action.session.Client().ListContainer(action.session.Context(), req); err == nil {
-		if err := net.CheckRPCStatus("listing container", res.Status); err != nil {
-			return []*storage.ResourceInfo{}, err
-		}
-
-		fileList := make([]*storage.ResourceInfo, 0, len(res.Infos)*64)
-		for _, fi := range res.Infos {
-			// Ignore resources that are neither files nor directories
-			if fi.Type <= storage.ResourceType_RESOURCE_TYPE_INVALID || fi.Type >= storage.ResourceType_RESOURCE_TYPE_INTERNAL {
-				continue
-			}
-
-			fileList = append(fileList, fi)
-
-			if includeSubdirectories {
-				// Recurse into subdirectories
-				if fi.Type == storage.ResourceType_RESOURCE_TYPE_CONTAINER {
-					if subFileList, err := action.ListAll(fi.Path, includeSubdirectories); err == nil {
-						for _, fiSub := range subFileList {
-							fileList = append(fileList, fiSub)
-						}
-					} else {
-						return []*storage.ResourceInfo{}, err
-					}
-				}
-			}
-		}
-
-		return fileList, nil
-	} else {
-		return []*storage.ResourceInfo{}, fmt.Errorf("unable to list files in '%v': %v", path, err)
+	res, err := action.session.Client().ListContainer(action.session.Context(), req)
+	if err := net.CheckRPCInvocation("listing container", res, err); err != nil {
+		return nil, err
 	}
+
+	fileList := make([]*storage.ResourceInfo, 0, len(res.Infos)*64)
+	for _, fi := range res.Infos {
+		// Ignore resources that are neither files nor directories
+		if fi.Type <= storage.ResourceType_RESOURCE_TYPE_INVALID || fi.Type >= storage.ResourceType_RESOURCE_TYPE_INTERNAL {
+			continue
+		}
+
+		fileList = append(fileList, fi)
+
+		if fi.Type == storage.ResourceType_RESOURCE_TYPE_CONTAINER && includeSubdirectories {
+			subFileList, err := action.ListAll(fi.Path, includeSubdirectories)
+			if err != nil {
+				return nil, err
+			}
+
+			for _, fiSub := range subFileList {
+				fileList = append(fileList, fiSub)
+			}
+		}
+	}
+
+	return fileList, nil
 }
 
 // ListAllWithFilter retrieves all files and directories that fulfill the provided predicate.
 func (action *EnumFilesAction) ListAllWithFilter(path string, includeSubdirectories bool, filter func(*storage.ResourceInfo) bool) ([]*storage.ResourceInfo, error) {
-	if all, err := action.ListAll(path, includeSubdirectories); err == nil {
-		fileList := make([]*storage.ResourceInfo, 0, len(all))
-
-		for _, fi := range all {
-			// Add only those entries that fulfill the predicate
-			if filter(fi) {
-				fileList = append(fileList, fi)
-			}
-		}
-
-		return fileList, nil
-	} else {
-		return []*storage.ResourceInfo{}, err
+	all, err := action.ListAll(path, includeSubdirectories)
+	if err != nil {
+		return nil, err
 	}
+
+	fileList := make([]*storage.ResourceInfo, 0, len(all))
+
+	for _, fi := range all {
+		// Add only those entries that fulfill the predicate
+		if filter(fi) {
+			fileList = append(fileList, fi)
+		}
+	}
+
+	return fileList, nil
 }
 
 // ListFiles retrieves all files contained in the provided path.
@@ -122,9 +117,9 @@ func NewEnumFilesAction(session *reva.Session) (*EnumFilesAction, error) {
 
 // MustNewEnumFilesAction creates a new enum files action and panics on failure.
 func MustNewEnumFilesAction(session *reva.Session) *EnumFilesAction {
-	if action, err := NewEnumFilesAction(session); err == nil {
-		return action
-	} else {
+	action, err := NewEnumFilesAction(session)
+	if err != nil {
 		panic(err)
 	}
+	return action
 }

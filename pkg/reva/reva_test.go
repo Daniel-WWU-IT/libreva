@@ -85,10 +85,9 @@ func TestHTTPRequest(t *testing.T) {
 	tests := []struct {
 		url           string
 		shouldSucceed bool
-		wants         int
 	}{
-		{"https://google.de", true, 200},
-		{"https://ujhwrgobniwoeo.de", false, 0},
+		{"https://google.de", true},
+		{"https://ujhwrgobniwoeo.de", false},
 	}
 
 	// Prepare the session
@@ -96,11 +95,7 @@ func TestHTTPRequest(t *testing.T) {
 		for _, test := range tests {
 			t.Run(test.url, func(t *testing.T) {
 				if request, err := session.NewHTTPRequest(test.url, "GET", "", nil); err == nil {
-					if status, _, err := request.Do(); err == nil && test.shouldSucceed {
-						if status != test.wants {
-							t.Errorf(testintl.FormatTestResult("HTTPRequest.Do", test.wants, status))
-						}
-					} else if err != nil && test.shouldSucceed {
+					if _, err := request.Do(true); err != nil && test.shouldSucceed {
 						t.Errorf(testintl.FormatTestError("HTTPRequest.Do", err))
 					} else if err == nil && !test.shouldSucceed {
 						t.Errorf(testintl.FormatTestError("HTTPRequest.Do", fmt.Errorf("send request to an invalid host succeeded")))

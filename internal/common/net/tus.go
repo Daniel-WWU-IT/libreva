@@ -46,26 +46,26 @@ func (client *TUSClient) initClient(endpoint string, accessToken string, transpo
 	client.config = tus.DefaultConfig()
 	client.config.Resume = true
 
-	if memStore, err := memorystore.NewMemoryStore(); err == nil {
-		client.config.Store = memStore
-	} else {
+	memStore, err := memorystore.NewMemoryStore()
+	if err != nil {
 		return fmt.Errorf("unable to create a TUS memory store: %v", err)
 	}
+	client.config.Store = memStore
 
 	if accessToken != "" {
-		client.config.Header.Add(common.AccessTokenName, accessToken)
+		client.config.Header.Add(AccessTokenName, accessToken)
 	}
 
 	if transportToken != "" {
-		client.config.Header.Add(common.TransportTokenName, transportToken)
+		client.config.Header.Add(TransportTokenName, transportToken)
 	}
 
 	// Create the TUS client
-	if tusClient, err := tus.NewClient(endpoint, client.config); err == nil {
-		client.client = tusClient
-	} else {
+	tusClient, err := tus.NewClient(endpoint, client.config)
+	if err != nil {
 		return fmt.Errorf("error creating the TUS client: %v", err)
 	}
+	client.client = tusClient
 
 	// Check if the TUS server supports resource creation
 	client.supportsResourceCreation = client.checkEndpointCreationOption(endpoint)
@@ -74,8 +74,7 @@ func (client *TUSClient) initClient(endpoint string, accessToken string, transpo
 }
 
 func (client *TUSClient) checkEndpointCreationOption(endpoint string) bool {
-	// Perform an OPTIONS request to the endpoint; if this succeeds, check if the header "Tus-Extension"
-	// contains the "creation" flag
+	// Perform an OPTIONS request to the endpoint; if this succeeds, check if the header "Tus-Extension" contains the "creation" flag
 	httpClient := &http.Client{
 		Timeout: time.Duration(1.5 * float64(time.Second)),
 	}
@@ -104,11 +103,11 @@ func (client *TUSClient) Write(data io.Reader, target string, fileInfo os.FileIn
 
 	var uploader *tus.Uploader
 	if client.supportsResourceCreation {
-		if upldr, err := client.client.CreateUpload(upload); err == nil {
-			uploader = upldr
-		} else {
+		upldr, err := client.client.CreateUpload(upload)
+		if err != nil {
 			return fmt.Errorf("unable to perform the TUS resource creation for '%v': %v", client.client.Url, err)
 		}
+		uploader = upldr
 	} else {
 		uploader = tus.NewUploader(client.client, client.client.Url, upload, 0)
 	}

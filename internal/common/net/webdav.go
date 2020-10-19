@@ -45,7 +45,7 @@ func (webdav *WebDAVClient) initClient(endpoint string, userName string, passwor
 	webdav.client = gowebdav.NewClient(endpoint, userName, password)
 
 	if accessToken != "" {
-		webdav.client.SetHeader(common.AccessTokenName, accessToken)
+		webdav.client.SetHeader(AccessTokenName, accessToken)
 	}
 
 	return nil
@@ -53,27 +53,25 @@ func (webdav *WebDAVClient) initClient(endpoint string, userName string, passwor
 
 // Read reads all data from the endpoint.
 func (webdav *WebDAVClient) Read(file string) ([]byte, error) {
-	if reader, err := webdav.client.ReadStream(file); err == nil {
-		defer reader.Close()
-
-		if data, err := ioutil.ReadAll(reader); err == nil {
-			return data, nil
-		} else {
-			return nil, fmt.Errorf("unable to read the data: %v", err)
-		}
-	} else {
+	reader, err := webdav.client.ReadStream(file)
+	if err != nil {
 		return nil, fmt.Errorf("unable to create reader: %v", err)
 	}
+	defer reader.Close()
+
+	data, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read the data: %v", err)
+	}
+	return data, nil
 }
 
 // Write writes data from a stream to the endpoint.
 func (webdav *WebDAVClient) Write(file string, data io.Reader, size int64) error {
-	if size > 0 {
-		webdav.client.SetHeader("Upload-Length", strconv.FormatInt(size, 10))
+	webdav.client.SetHeader("Upload-Length", strconv.FormatInt(size, 10))
 
-		if err := webdav.client.WriteStream(file, data, 0700); err != nil {
-			return fmt.Errorf("unable to write the data: %v", err)
-		}
+	if err := webdav.client.WriteStream(file, data, 0700); err != nil {
+		return fmt.Errorf("unable to write the data: %v", err)
 	}
 
 	return nil
@@ -103,15 +101,16 @@ func NewWebDAVClientWithAccessToken(endpoint string, accessToken string) (*WebDA
 
 // NewWebDAVClientWithOpaque creates a new WebDAV client using the information stored in the opaque.
 func NewWebDAVClientWithOpaque(endpoint string, opaque *types.Opaque) (*WebDAVClient, map[string]string, error) {
-	if values, err := common.GetValuesFromOpaque(opaque, []string{WebDAVTokenName, WebDAVPathName}, true); err == nil {
-		if client, err := NewWebDAVClientWithAccessToken(endpoint, values[WebDAVTokenName]); err == nil {
-			return client, values, nil
-		} else {
-			return nil, nil, err
-		}
-	} else {
+	values, err := common.GetValuesFromOpaque(opaque, []string{WebDAVTokenName, WebDAVPathName}, true)
+	if err != nil {
 		return nil, nil, fmt.Errorf("invalid opaque object: %v", err)
 	}
+
+	client, err := NewWebDAVClientWithAccessToken(endpoint, values[WebDAVTokenName])
+	if err != nil {
+		return nil, nil, err
+	}
+	return client, values, nil
 }
 
 // NewWebDAVClient creates a new WebDAV client with user credentials.

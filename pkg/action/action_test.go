@@ -39,7 +39,6 @@ func TestActions(t *testing.T) {
 		password string
 	}{
 		{"sciencemesh-test.uni-muenster.de:9600", "test", "testpass"},
-		{"sciencemesh.cernbox.cern.ch:443", "ishank", "ishankpass"},
 	}
 
 	for _, test := range tests {

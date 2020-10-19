@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-package common
+package net
 
 const (
 	AccessTokenIndex   = 0

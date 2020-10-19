@@ -38,17 +38,35 @@ import (
 	testintl "github.com/Daniel-WWU-IT/libreva/internal/testing"
 )
 
-func TestCheckRPCStatus(t *testing.T) {
-	status := rpc.Status{
-		Code: rpc.Code_CODE_OK,
+type rpcStatusTest struct {
+	status rpc.Code
+}
+
+func (r *rpcStatusTest) GetStatus() *rpc.Status {
+	return &rpc.Status{
+		Code: r.status,
 	}
-	if err := net.CheckRPCStatus("ok-check", &status); err != nil {
-		t.Errorf(testintl.FormatTestError("CheckRPCStatus", err, "ok-check", status))
+}
+
+func TestCheckRPCInvocation(t *testing.T) {
+	tests := []struct {
+		operation     string
+		status        rpcStatusTest
+		callError     error
+		shouldSucceed bool
+	}{
+		{"ok-check", rpcStatusTest{rpc.Code_CODE_OK}, nil, true},
+		{"fail-status", rpcStatusTest{rpc.Code_CODE_NOT_FOUND}, nil, false},
+		{"fail-err", rpcStatusTest{rpc.Code_CODE_OK}, fmt.Errorf("failed"), false},
 	}
 
-	status.Code = rpc.Code_CODE_PERMISSION_DENIED
-	if err := net.CheckRPCStatus("fail-check", &status); err == nil {
-		t.Errorf(testintl.FormatTestError("CheckRPCStatus", fmt.Errorf("accepted an invalid RPC status"), "fail-check", status))
+	for _, test := range tests {
+		err := net.CheckRPCInvocation(test.operation, &test.status, test.callError)
+		if err != nil && test.shouldSucceed {
+			t.Errorf(testintl.FormatTestError("CheckRPCInvocation", err, test.operation, test.status, test.callError))
+		} else if err == nil && !test.shouldSucceed {
+			t.Errorf(testintl.FormatTestError("CheckRPCInvocation", fmt.Errorf("accepted an invalid RPC invocation"), test.operation, test.status, test.callError))
+		}
 	}
 }
 
